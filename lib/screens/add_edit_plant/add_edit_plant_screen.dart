@@ -177,7 +177,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
       ),
       builder: (context) {
         return SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
