@@ -25,6 +25,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
 
   String? _photoPath;
   bool _isEditing = false;
+  bool _isSaving = false;
   String? _selectedLocation;
   bool _isCustomLocation = false;
 
@@ -235,6 +236,9 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
 
   Future<void> _saveForm() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isSaving) return;
+
+    setState(() => _isSaving = true);
 
     final location = _isCustomLocation
         ? _customLocationController.text.trim()
@@ -242,52 +246,86 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
 
     final provider = context.read<PlantProvider>();
 
-    if (_isEditing) {
-      await provider.updatePlant(
-        id: widget.plantId!,
-        name: _nameController.text.trim(),
-        species: _speciesController.text.trim(),
-        location: location,
-        photoPath: _photoPath,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-      );
-    } else {
-      await provider.addPlant(
-        name: _nameController.text.trim(),
-        species: _speciesController.text.trim(),
-        location: location,
-        careTasks:
-            _careTasks
-                .map(
-                  (ct) => (
-                    type: ct.type,
-                    intervalValue: ct.intervalValue,
-                    intervalUnit: ct.intervalUnit,
-                  ),
-                )
-                .toList(),
-        photoPath: _photoPath,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-      );
-    }
+    try {
+      if (_isEditing) {
+        debugPrint('[AddEditPlant] updatePlant: ${widget.plantId}');
+        await provider.updatePlant(
+          id: widget.plantId!,
+          name: _nameController.text.trim(),
+          species: _speciesController.text.trim(),
+          location: location,
+          photoPath: _photoPath,
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
+        );
+        debugPrint('[AddEditPlant] updatePlant: success');
+      } else {
+        debugPrint('[AddEditPlant] addPlant: starting');
+        final notificationFailures = await provider.addPlant(
+          name: _nameController.text.trim(),
+          species: _speciesController.text.trim(),
+          location: location,
+          careTasks:
+              _careTasks
+                  .map(
+                    (ct) => (
+                      type: ct.type,
+                      intervalValue: ct.intervalValue,
+                      intervalUnit: ct.intervalUnit,
+                    ),
+                  )
+                  .toList(),
+          photoPath: _photoPath,
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
+        );
+        debugPrint('[AddEditPlant] addPlant: success (notification failures: $notificationFailures)');
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isEditing
-                ? 'Tanaman berhasil diperbarui!'
-                : 'Tanaman berhasil ditambahkan!',
+        if (mounted && notificationFailures > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '$notificationFailures notifikasi gagal dijadwalkan. '
+                'Data tanaman tetap tersimpan.',
+              ),
+              backgroundColor: AppColors.warning,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isEditing
+                  ? 'Tanaman berhasil diperbarui!'
+                  : 'Tanaman berhasil ditambahkan!',
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
           ),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      Navigator.pop(context);
+        );
+        debugPrint('[AddEditPlant] navigating back');
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      debugPrint('[AddEditPlant] ERROR: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -381,10 +419,19 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _saveForm,
-                  child: Text(
-                    _isEditing ? 'Simpan Perubahan' : 'Tambah Tanaman',
-                  ),
+                  onPressed: _isSaving ? null : _saveForm,
+                  child:
+                      _isSaving
+                          ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : Text(
+                            _isEditing
+                                ? 'Simpan Perubahan'
+                                : 'Tambah Tanaman',
+                          ),
                 ),
               ),
             ],

@@ -111,7 +111,7 @@ class PlantProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> addPlant({
+  Future<int> addPlant({
     required String name,
     required String species,
     String? location,
@@ -133,8 +133,12 @@ class PlantProvider extends ChangeNotifier {
 
     newPlant.healthScore = _calculateHealthScore(newPlant);
 
+    debugPrint('[PlantProvider] addPlant: saving plant $id ($name)');
     await _dbService.savePlant(newPlant);
+    debugPrint('[PlantProvider] addPlant: plant saved');
     _plants.add(newPlant);
+
+    int notificationFailures = 0;
 
     for (final ct in careTasks) {
       final task = CareTask(
@@ -147,18 +151,29 @@ class PlantProvider extends ChangeNotifier {
       );
       task.complete();
 
+      debugPrint('[PlantProvider] addPlant: saving care task ${ct.type}');
       await _dbService.saveCareTask(task);
+      debugPrint('[PlantProvider] addPlant: care task saved');
       _careTasks.add(task);
 
-      await _notificationService.scheduleCareReminder(
-        plantId: id,
-        plantName: name,
-        careType: ct.type,
-        nextDueDate: task.nextDueDate,
-      );
+      try {
+        debugPrint('[PlantProvider] addPlant: scheduling notification for ${ct.type}');
+        await _notificationService.scheduleCareReminder(
+          plantId: id,
+          plantName: name,
+          careType: ct.type,
+          nextDueDate: task.nextDueDate,
+        );
+        debugPrint('[PlantProvider] addPlant: notification scheduled');
+      } catch (e) {
+        debugPrint('[PlantProvider] addPlant: notification FAILED for ${ct.type}: $e');
+        notificationFailures++;
+      }
     }
 
     notifyListeners();
+    debugPrint('[PlantProvider] addPlant: done ($notificationFailures notification failures)');
+    return notificationFailures;
   }
 
   Future<void> updatePlant({
