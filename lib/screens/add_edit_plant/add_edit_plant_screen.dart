@@ -609,55 +609,57 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
                   children: [
                     Text('Interval', style: textTheme.bodySmall),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 80,
-                          child: TextFormField(
-                            initialValue: task.intervalValue.toString(),
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
+                    IntrinsicWidth(
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 80,
+                            child: TextFormField(
+                              initialValue: task.intervalValue.toString(),
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                               ),
+                              onChanged: (val) {
+                                final parsed = int.tryParse(val);
+                                if (parsed != null && parsed > 0) {
+                                  task.intervalValue = parsed;
+                                }
+                              },
                             ),
-                            onChanged: (val) {
-                              final parsed = int.tryParse(val);
-                              if (parsed != null && parsed > 0) {
-                                task.intervalValue = parsed;
-                              }
-                            },
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: DropdownButtonFormField<IntervalUnit>(
-                            value: task.intervalUnit,
-                            decoration: const InputDecoration(
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: DropdownButtonFormField<IntervalUnit>(
+                              value: task.intervalUnit,
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                               ),
+                              items: IntervalUnit.values.map((unit) {
+                                return DropdownMenuItem(
+                                  value: unit,
+                                  child: Text(unit.displayNamePlural),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    task.intervalUnit = val;
+                                  });
+                                }
+                              },
                             ),
-                            items: IntervalUnit.values.map((unit) {
-                              return DropdownMenuItem(
-                                value: unit,
-                                child: Text(unit.displayNamePlural),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() {
-                                  task.intervalUnit = val;
-                                });
-                              }
-                            },
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
