@@ -1,0 +1,477 @@
+import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+import '../models/plant.dart';
+import '../models/watering_log.dart';
+import '../models/growth_entry.dart';
+import '../models/care_task.dart';
+import '../models/care_history.dart';
+import '../models/enums.dart';
+import '../services/database_service.dart';
+import '../services/notification_service.dart';
+import '../services/image_service.dart';
+
+class PlantProvider extends ChangeNotifier {
+  final DatabaseService _dbService;
+  final NotificationService _notificationService;
+  final ImageService _imageService;
+  final Uuid _uuid = const Uuid();
+
+  List<Plant> _plants = [];
+  List<CareTask> _careTasks = [];
+  List<CareHistory> _careHistories = [];
+  bool _isLoading = false;
+
+  List<Plant> get plants => _plants;
+  List<CareTask> get careTasks => _careTasks;
+  List<CareHistory> get careHistories => _careHistories;
+  bool get isLoading => _isLoading;
+
+  PlantProvider({
+    required DatabaseService dbService,
+    required NotificationService notificationService,
+    required ImageService imageService,
+  }) : _dbService = dbService,
+       _notificationService = notificationService,
+       _imageService = imageService;
+
+  List<CareTask> getCareTasksForPlant(String plantId) {
+    return _careTasks.where((t) => t.plantId == plantId).toList();
+  }
+
+  List<CareHistory> getCareHistoriesForPlant(String plantId) {
+    return _careHistories.where((h) => h.plantId == plantId).toList();
+  }
+
+  Future<void> loadPlants() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      _plants = _dbService.getAllPlants();
+      _careTasks = _dbService.getAllCareTasks();
+      _careHistories = _dbService.getAllCareHistories();
+
+      for (var plant in _plants) {
+        final hasOldData =
+            plant.wateringIntervalDays > 0 &&
+            getCareTasksForPlant(plant.id).isEmpty;
+
+        if (hasOldData) {
+          await _migrateOldPlant(plant);
+        }
+
+        final double currentScore = _calculateHealthScore(plant);
+        if (plant.healthScore != currentScore) {
+          plant.healthScore = currentScore;
+          await _dbService.savePlant(plant);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading plants: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _migrateOldPlant(Plant plant) async {
+    final defaultInterval = plant.wateringIntervalDays;
+    final nextDue = plant.lastWatered != null
+        ? DateTime(
+              plant.lastWatered!.year,
+              plant.lastWatered!.month,
+              plant.lastWatered!.day,
+            ).add(Duration(days: defaultInterval))
+        : plant.dateAdded.add(Duration(days: defaultInterval));
+
+    final task = CareTask(
+      id: _uuid.v4(),
+      plantId: plant.id,
+      careTypeIndex: CareType.watering.index,
+      intervalValue: defaultInterval,
+      intervalUnitIndex: IntervalUnit.day.index,
+      nextDueDate: nextDue,
+      lastCompletedDate: plant.lastWatered,
+    );
+
+    await _dbService.saveCareTask(task);
+    _careTasks.add(task);
+
+    if (plant.wateringHistory.isNotEmpty) {
+      for (final log in plant.wateringHistory) {
+        final history = CareHistory(
+          id: _uuid.v4(),
+          plantId: plant.id,
+          careTypeIndex: CareType.watering.index,
+          completedAt: log.wateredAt,
+        );
+        await _dbService.saveCareHistory(history);
+        _careHistories.add(history);
+      }
+    }
+  }
+
+  Future<void> addPlant({
+    required String name,
+    required String species,
+    String? location,
+    required List<({CareType type, int intervalValue, IntervalUnit intervalUnit})> careTasks,
+    String? photoPath,
+    String? notes,
+  }) async {
+    final String id = _uuid.v4();
+    final Plant newPlant = Plant(
+      id: id,
+      name: name,
+      species: species,
+      dateAdded: DateTime.now(),
+      wateringIntervalDays: 1,
+      photoPath: photoPath,
+      notes: notes,
+      location: location,
+    );
+
+    newPlant.healthScore = _calculateHealthScore(newPlant);
+
+    await _dbService.savePlant(newPlant);
+    _plants.add(newPlant);
+
+    for (final ct in careTasks) {
+      final task = CareTask(
+        id: _uuid.v4(),
+        plantId: id,
+        careTypeIndex: ct.type.index,
+        intervalValue: ct.intervalValue,
+        intervalUnitIndex: ct.intervalUnit.index,
+        nextDueDate: DateTime.now(),
+      );
+      task.complete();
+
+      await _dbService.saveCareTask(task);
+      _careTasks.add(task);
+
+      await _notificationService.scheduleCareReminder(
+        plantId: id,
+        plantName: name,
+        careType: ct.type,
+        nextDueDate: task.nextDueDate,
+      );
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> updatePlant({
+    required String id,
+    required String name,
+    required String species,
+    String? location,
+    String? photoPath,
+    String? notes,
+  }) async {
+    final int index = _plants.indexWhere((p) => p.id == id);
+    if (index != -1) {
+      final Plant plant = _plants[index];
+
+      if (photoPath != null &&
+          plant.photoPath != null &&
+          plant.photoPath != photoPath) {
+        await _imageService.deleteImage(plant.photoPath);
+      }
+
+      plant.name = name;
+      plant.species = species;
+      plant.location = location;
+      if (photoPath != null) {
+        plant.photoPath = photoPath;
+      }
+      plant.notes = notes;
+
+      plant.healthScore = _calculateHealthScore(plant);
+
+      await _dbService.savePlant(plant);
+      notifyListeners();
+    }
+  }
+
+  Future<void> deletePlant(String id) async {
+    final int index = _plants.indexWhere((p) => p.id == id);
+    if (index != -1) {
+      final Plant plant = _plants[index];
+
+      final tasks = getCareTasksForPlant(id);
+      for (final task in tasks) {
+        await _notificationService.cancelCareReminder(
+          id,
+          task.careType,
+        );
+      }
+
+      if (plant.photoPath != null) {
+        await _imageService.deleteImage(plant.photoPath);
+      }
+      for (var entry in plant.growthDiary) {
+        await _imageService.deleteImage(entry.photoPath);
+      }
+
+      await _dbService.deletePlant(id);
+      await _dbService.deleteCareTasksForPlant(id);
+      await _dbService.deleteCareHistoriesForPlant(id);
+
+      _careTasks.removeWhere((t) => t.plantId == id);
+      _careHistories.removeWhere((h) => h.plantId == id);
+      _plants.removeAt(index);
+
+      notifyListeners();
+    }
+  }
+
+  Future<void> completeCareTask(String plantId, CareType careType) async {
+    final tasks = getCareTasksForPlant(plantId);
+    final task = tasks.where((t) => t.careType == careType).firstOrNull;
+    if (task == null) return;
+
+    final now = DateTime.now();
+
+    final history = CareHistory(
+      id: _uuid.v4(),
+      plantId: plantId,
+      careTypeIndex: careType.index,
+      completedAt: now,
+    );
+    await _dbService.saveCareHistory(history);
+    _careHistories.insert(0, history);
+
+    task.complete();
+    await _dbService.saveCareTask(task);
+
+    final plant = _plants.firstWhere((p) => p.id == plantId);
+    if (careType == CareType.watering) {
+      final bool wasOnTime = !task.isOverdue;
+
+      plant.lastWatered = now;
+      final log = WateringLog(
+        id: _uuid.v4(),
+        wateredAt: now,
+        wasOnTime: wasOnTime,
+      );
+      plant.wateringHistory.insert(0, log);
+
+      plant.healthScore = _calculateHealthScore(plant);
+      await _dbService.savePlant(plant);
+    }
+
+    await _notificationService.scheduleCareReminder(
+      plantId: plantId,
+      plantName: plant.name,
+      careType: careType,
+      nextDueDate: task.nextDueDate,
+    );
+
+    notifyListeners();
+  }
+
+  Future<void> updateCareTask({
+    required String taskId,
+    required int intervalValue,
+    required IntervalUnit intervalUnit,
+  }) async {
+    final task = _careTasks.firstWhere((t) => t.id == taskId);
+    task.intervalValue = intervalValue;
+    task.intervalUnit = intervalUnit;
+
+    final now = DateTime.now();
+    if (task.nextDueDate.isBefore(now)) {
+      task.nextDueDate = now;
+    }
+
+    switch (intervalUnit) {
+      case IntervalUnit.hour:
+        task.nextDueDate = task.nextDueDate.add(
+          Duration(hours: intervalValue),
+        );
+      case IntervalUnit.day:
+        task.nextDueDate = task.nextDueDate.add(
+          Duration(days: intervalValue),
+        );
+      case IntervalUnit.week:
+        task.nextDueDate = task.nextDueDate.add(
+          Duration(days: 7 * intervalValue),
+        );
+      case IntervalUnit.month:
+        task.nextDueDate = DateTime(
+          task.nextDueDate.year,
+          task.nextDueDate.month + intervalValue,
+          task.nextDueDate.day,
+          task.nextDueDate.hour,
+          task.nextDueDate.minute,
+        );
+    }
+
+    await _dbService.saveCareTask(task);
+
+    final plant = _plants.firstWhere((p) => p.id == task.plantId);
+    await _notificationService.scheduleCareReminder(
+      plantId: task.plantId,
+      plantName: plant.name,
+      careType: task.careType,
+      nextDueDate: task.nextDueDate,
+    );
+
+    notifyListeners();
+  }
+
+  Future<void> addCareTask({
+    required String plantId,
+    required CareType careType,
+    required int intervalValue,
+    required IntervalUnit intervalUnit,
+  }) async {
+    final task = CareTask(
+      id: _uuid.v4(),
+      plantId: plantId,
+      careTypeIndex: careType.index,
+      intervalValue: intervalValue,
+      intervalUnitIndex: intervalUnit.index,
+      nextDueDate: DateTime.now(),
+    );
+    task.complete();
+
+    await _dbService.saveCareTask(task);
+    _careTasks.add(task);
+
+    final plant = _plants.firstWhere((p) => p.id == plantId);
+    await _notificationService.scheduleCareReminder(
+      plantId: plantId,
+      plantName: plant.name,
+      careType: careType,
+      nextDueDate: task.nextDueDate,
+    );
+
+    notifyListeners();
+  }
+
+  Future<void> removeCareTask(String taskId) async {
+    final task = _careTasks.firstWhere((t) => t.id == taskId);
+    await _dbService.deleteCareTask(taskId);
+    _careTasks.removeWhere((t) => t.id == taskId);
+
+    await _notificationService.cancelCareReminder(
+      task.plantId,
+      task.careType,
+    );
+
+    notifyListeners();
+  }
+
+  Future<void> addGrowthEntry({
+    required String plantId,
+    required String photoPath,
+    String? note,
+  }) async {
+    final int index = _plants.indexWhere((p) => p.id == plantId);
+    if (index != -1) {
+      final Plant plant = _plants[index];
+
+      final GrowthEntry entry = GrowthEntry(
+        id: _uuid.v4(),
+        date: DateTime.now(),
+        photoPath: photoPath,
+        note: note,
+      );
+
+      plant.growthDiary.insert(0, entry);
+      plant.photoPath = photoPath;
+
+      await _dbService.savePlant(plant);
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteGrowthEntry({
+    required String plantId,
+    required String entryId,
+  }) async {
+    final int index = _plants.indexWhere((p) => p.id == plantId);
+    if (index != -1) {
+      final Plant plant = _plants[index];
+
+      final int entryIndex = plant.growthDiary.indexWhere(
+        (e) => e.id == entryId,
+      );
+      if (entryIndex != -1) {
+        final GrowthEntry entry = plant.growthDiary[entryIndex];
+        await _imageService.deleteImage(entry.photoPath);
+
+        plant.growthDiary.removeAt(entryIndex);
+
+        if (plant.photoPath == entry.photoPath) {
+          plant.photoPath = plant.growthDiary.isNotEmpty
+              ? plant.growthDiary.first.photoPath
+              : null;
+        }
+
+        await _dbService.savePlant(plant);
+        notifyListeners();
+      }
+    }
+  }
+
+  double _calculateHealthScore(Plant plant) {
+    final histories = _careHistories
+        .where((h) => h.plantId == plant.id && h.careType == CareType.watering)
+        .toList();
+
+    if (histories.isEmpty) {
+      return _applyCurrentOverdueDeduction(100.0, plant);
+    }
+
+    final now = DateTime.now();
+    final recentHistories = histories
+        .where((h) => now.difference(h.completedAt).inDays <= 30)
+        .toList();
+
+    final List<bool> onTimeFlags;
+    if (recentHistories.length >= 5) {
+      onTimeFlags = recentHistories.take(5).map((_) => true).toList();
+    } else if (histories.length >= 5) {
+      onTimeFlags = histories.take(5).map((_) => true).toList();
+    } else {
+      onTimeFlags = histories.map((_) => true).toList();
+    }
+
+    final int onTimeCount = onTimeFlags.where((f) => f).length;
+    double baseScore = (onTimeCount / onTimeFlags.length) * 100.0;
+
+    return _applyCurrentOverdueDeduction(baseScore, plant);
+  }
+
+  double _applyCurrentOverdueDeduction(double baseScore, Plant plant) {
+    final tasks = getCareTasksForPlant(plant.id);
+    int overdueCount = 0;
+    for (final task in tasks) {
+      if (task.isOverdue) overdueCount++;
+    }
+
+    if (overdueCount > 0) {
+      baseScore -= (overdueCount * 10.0);
+    }
+
+    final wateringTasks =
+        tasks.where((t) => t.careType == CareType.watering).toList();
+    if (wateringTasks.isNotEmpty) {
+      final wateringTask = wateringTasks.first;
+      if (wateringTask.isOverdue) {
+        final daysLate =
+            DateTime.now().difference(wateringTask.nextDueDate).inDays;
+        if (daysLate > 3) {
+          baseScore -= 15.0;
+        } else if (daysLate > 0) {
+          baseScore -= 5.0;
+        }
+      }
+    }
+
+    return baseScore.clamp(0.0, 100.0);
+  }
+}
