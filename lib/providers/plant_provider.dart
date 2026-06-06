@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/plant.dart';
@@ -66,8 +67,9 @@ class PlantProvider extends ChangeNotifier {
           await _dbService.savePlant(plant);
         }
       }
-    } catch (e) {
-      debugPrint('Error loading plants: $e');
+    } catch (e, stackTrace) {
+      debugPrint('[PlantProvider] loadPlants: ❌ $e');
+      debugPrintStack(stackTrace: stackTrace);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -165,8 +167,9 @@ class PlantProvider extends ChangeNotifier {
           nextDueDate: task.nextDueDate,
         );
         debugPrint('[PlantProvider] addPlant: notification scheduled');
-      } catch (e) {
-        debugPrint('[PlantProvider] addPlant: notification FAILED for ${ct.type}: $e');
+      } catch (e, stackTrace) {
+        debugPrint('[PlantProvider] addPlant: ❌ notification FAILED for ${ct.type}: $e');
+        debugPrintStack(stackTrace: stackTrace);
         notificationFailures++;
       }
     }
@@ -276,12 +279,17 @@ class PlantProvider extends ChangeNotifier {
       await _dbService.savePlant(plant);
     }
 
-    await _notificationService.scheduleCareReminder(
-      plantId: plantId,
-      plantName: plant.name,
-      careType: careType,
-      nextDueDate: task.nextDueDate,
-    );
+    try {
+      await _notificationService.scheduleCareReminder(
+        plantId: plantId,
+        plantName: plant.name,
+        careType: careType,
+        nextDueDate: task.nextDueDate,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('[PlantProvider] completeCareTask: ❌ schedule FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
 
     notifyListeners();
   }
@@ -326,12 +334,17 @@ class PlantProvider extends ChangeNotifier {
     await _dbService.saveCareTask(task);
 
     final plant = _plants.firstWhere((p) => p.id == task.plantId);
-    await _notificationService.scheduleCareReminder(
-      plantId: task.plantId,
-      plantName: plant.name,
-      careType: task.careType,
-      nextDueDate: task.nextDueDate,
-    );
+    try {
+      await _notificationService.scheduleCareReminder(
+        plantId: task.plantId,
+        plantName: plant.name,
+        careType: task.careType,
+        nextDueDate: task.nextDueDate,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('[PlantProvider] updateCareTask: ❌ schedule FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
 
     notifyListeners();
   }
@@ -356,12 +369,17 @@ class PlantProvider extends ChangeNotifier {
     _careTasks.add(task);
 
     final plant = _plants.firstWhere((p) => p.id == plantId);
-    await _notificationService.scheduleCareReminder(
-      plantId: plantId,
-      plantName: plant.name,
-      careType: careType,
-      nextDueDate: task.nextDueDate,
-    );
+    try {
+      await _notificationService.scheduleCareReminder(
+        plantId: plantId,
+        plantName: plant.name,
+        careType: careType,
+        nextDueDate: task.nextDueDate,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('[PlantProvider] addCareTask: ❌ schedule FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
 
     notifyListeners();
   }
@@ -371,10 +389,15 @@ class PlantProvider extends ChangeNotifier {
     await _dbService.deleteCareTask(taskId);
     _careTasks.removeWhere((t) => t.id == taskId);
 
-    await _notificationService.cancelCareReminder(
-      task.plantId,
-      task.careType,
-    );
+    try {
+      await _notificationService.cancelCareReminder(
+        task.plantId,
+        task.careType,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('[PlantProvider] removeCareTask: ❌ cancel FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
 
     notifyListeners();
   }

@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_10y.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -13,7 +14,14 @@ class NotificationService {
   static const String _otherChannelId = 'other_care_reminders';
 
   Future<void> init() async {
-    tz.initializeTimeZones();
+    debugPrint('[NotificationService] init: initializing timezones...');
+    try {
+      tz.initializeTimeZones();
+      debugPrint('[NotificationService] init: timezones initialized');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] init: timezone initialization FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -31,12 +39,28 @@ class NotificationService {
           iOS: initializationSettingsDarwin,
         );
 
-    await _notificationsPlugin.initialize(
-      settings: initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse details) {},
-    );
+    debugPrint('[NotificationService] init: initializing plugin...');
+    try {
+      await _notificationsPlugin.initialize(
+        settings: initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse details) {
+          debugPrint('[NotificationService] notification response: ${details.payload}');
+        },
+      );
+      debugPrint('[NotificationService] init: plugin initialized');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] init: plugin initialize FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
 
-    await _createNotificationChannels();
+    debugPrint('[NotificationService] init: creating notification channels...');
+    try {
+      await _createNotificationChannels();
+      debugPrint('[NotificationService] init: channels created');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] init: channel creation FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   Future<void> _createNotificationChannels() async {
@@ -46,7 +70,12 @@ class NotificationService {
               AndroidFlutterLocalNotificationsPlugin
             >();
 
-    if (androidImplementation == null) return;
+    if (androidImplementation == null) {
+      debugPrint('[NotificationService] _createNotificationChannels: no Android implementation (iOS/macOS)');
+      return;
+    }
+
+    debugPrint('[NotificationService] _createNotificationChannels: creating channels...');
 
     final wateringChannel = AndroidNotificationChannel(
       _wateringChannelId,
@@ -77,33 +106,78 @@ class NotificationService {
       enableVibration: true,
     );
 
-    await androidImplementation.createNotificationChannel(wateringChannel);
-    await androidImplementation.createNotificationChannel(fertilizingChannel);
-    await androidImplementation.createNotificationChannel(otherChannel);
+    try {
+      await androidImplementation.createNotificationChannel(wateringChannel);
+      debugPrint('[NotificationService] _createNotificationChannels: watering channel created');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] _createNotificationChannels: watering channel FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
+    try {
+      await androidImplementation.createNotificationChannel(fertilizingChannel);
+      debugPrint('[NotificationService] _createNotificationChannels: fertilizing channel created');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] _createNotificationChannels: fertilizing channel FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
+    try {
+      await androidImplementation.createNotificationChannel(otherChannel);
+      debugPrint('[NotificationService] _createNotificationChannels: other channel created');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] _createNotificationChannels: other channel FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   Future<bool> requestPermissions() async {
+    debugPrint('[NotificationService] requestPermissions: requesting Android notification permission...');
+
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
         _notificationsPlugin
             .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin
             >();
 
-    final bool? grantedNotification = await androidImplementation
-        ?.requestNotificationsPermission();
+    bool? grantedNotification;
+    try {
+      grantedNotification = await androidImplementation
+          ?.requestNotificationsPermission();
+      debugPrint('[NotificationService] requestPermissions: notification permission -> $grantedNotification');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] requestPermissions: notification permission FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
 
-    final bool? grantedFullScreenIntent = await androidImplementation
-        ?.requestFullScreenIntentPermission();
+    bool? grantedFullScreenIntent;
+    try {
+      grantedFullScreenIntent = await androidImplementation
+          ?.requestFullScreenIntentPermission();
+      debugPrint('[NotificationService] requestPermissions: fullScreenIntent permission -> $grantedFullScreenIntent');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] requestPermissions: fullScreenIntent permission FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
 
-    final bool? iOSGranted = await _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin
-        >()
-        ?.requestPermissions(alert: true, badge: true, sound: true);
+    bool? iOSGranted;
+    try {
+      iOSGranted = await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+      debugPrint('[NotificationService] requestPermissions: iOS permission -> $iOSGranted');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] requestPermissions: iOS permission FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
 
-    return (grantedNotification ?? false) ||
+    final result = (grantedNotification ?? false) ||
         (grantedFullScreenIntent ?? false) ||
         (iOSGranted ?? false);
+    debugPrint('[NotificationService] requestPermissions: overall result -> $result');
+    return result;
   }
 
   int _getNotificationId(String plantId, CareType careType) {
@@ -117,35 +191,61 @@ class NotificationService {
     required DateTime nextDueDate,
   }) async {
     final int id = _getNotificationId(plantId, careType);
+    debugPrint('[NotificationService] scheduleCareReminder: id=$id plant=$plantName type=$careType nextDueDate=$nextDueDate');
 
-    await cancelCareReminder(plantId, careType);
+    debugPrint('[NotificationService] scheduleCareReminder: cancelling existing reminder...');
+    try {
+      await cancelCareReminder(plantId, careType);
+      debugPrint('[NotificationService] scheduleCareReminder: existing reminder cancelled');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] scheduleCareReminder: cancel FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
 
     final now = DateTime.now();
     var scheduledDateTime = nextDueDate;
 
     if (scheduledDateTime.isBefore(now)) {
       scheduledDateTime = now.add(const Duration(seconds: 10));
+      debugPrint('[NotificationService] scheduleCareReminder: date in past, rescheduled to $scheduledDateTime');
     }
 
-    final tz.TZDateTime tzScheduledDate = tz.TZDateTime.from(
-      scheduledDateTime,
-      tz.local,
-    );
+    debugPrint('[NotificationService] scheduleCareReminder: converting to TZDateTime...');
+    tz.TZDateTime tzScheduledDate;
+    try {
+      tzScheduledDate = tz.TZDateTime.from(
+        scheduledDateTime,
+        tz.local,
+      );
+      debugPrint('[NotificationService] scheduleCareReminder: TZDateTime=$tzScheduledDate timezone=${tz.local.name}');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] scheduleCareReminder: TZDateTime conversion FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+      return;
+    }
 
     final (String channelId, String title, String body, String soundName) =
         _getNotificationContent(careType, plantName);
 
-    final AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          channelId,
-          title,
-          channelDescription: body,
-          importance: Importance.max,
-          priority: Priority.high,
-          sound: RawResourceAndroidNotificationSound('watering_alarm'),
-          vibrationPattern: Int64List.fromList([0, 500, 300, 500, 300, 1000]),
-          fullScreenIntent: true,
-        );
+    debugPrint('[NotificationService] scheduleCareReminder: building AndroidNotificationDetails...');
+    AndroidNotificationDetails androidDetails;
+    try {
+      androidDetails = AndroidNotificationDetails(
+        channelId,
+        title,
+        channelDescription: body,
+        importance: Importance.max,
+        priority: Priority.high,
+        sound: RawResourceAndroidNotificationSound('watering_alarm'),
+        vibrationPattern: Int64List.fromList([0, 500, 300, 500, 300, 1000]),
+        fullScreenIntent: true,
+      );
+      debugPrint('[NotificationService] scheduleCareReminder: AndroidNotificationDetails built');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] scheduleCareReminder: AndroidNotificationDetails FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+      return;
+    }
 
     const DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
       presentAlert: true,
@@ -158,15 +258,23 @@ class NotificationService {
       iOS: iOSDetails,
     );
 
-    await _notificationsPlugin.zonedSchedule(
-      id: id,
-      title: title,
-      body: body,
-      scheduledDate: tzScheduledDate,
-      notificationDetails: platformDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.dateAndTime,
-    );
+    debugPrint('[NotificationService] scheduleCareReminder: calling zonedSchedule...');
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tzScheduledDate,
+        notificationDetails: platformDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      );
+      debugPrint('[NotificationService] scheduleCareReminder: ✅ SUCCESS');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] scheduleCareReminder: ❌ zonedSchedule FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+      rethrow;
+    }
   }
 
   (String, String, String, String) _getNotificationContent(
@@ -214,10 +322,24 @@ class NotificationService {
 
   Future<void> cancelCareReminder(String plantId, CareType careType) async {
     final int id = _getNotificationId(plantId, careType);
-    await _notificationsPlugin.cancel(id: id);
+    debugPrint('[NotificationService] cancelCareReminder: cancelling id=$id for plant=$plantId type=$careType');
+    try {
+      await _notificationsPlugin.cancel(id: id);
+      debugPrint('[NotificationService] cancelCareReminder: ✅ cancelled id=$id');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] cancelCareReminder: ❌ cancel FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   Future<void> cancelAllReminders() async {
-    await _notificationsPlugin.cancelAll();
+    debugPrint('[NotificationService] cancelAllReminders: cancelling all...');
+    try {
+      await _notificationsPlugin.cancelAll();
+      debugPrint('[NotificationService] cancelAllReminders: ✅ all cancelled');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] cancelAllReminders: ❌ cancelAll FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 }
