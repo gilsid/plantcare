@@ -88,14 +88,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Plant Care',
+                            'PlantCare',
                             style: textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 28,
                             ),
                           ),
                           Text(
-                            'Tracker v2.0',
+                            'v0.0.2-alpha',
                             style: textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 28,

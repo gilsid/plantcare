@@ -266,7 +266,7 @@ class NotificationService {
         body: body,
         scheduledDate: tzScheduledDate,
         notificationDetails: platformDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.dateAndTime,
       );
       debugPrint('[NotificationService] scheduleCareReminder: ✅ SUCCESS');

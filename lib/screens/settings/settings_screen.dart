@@ -157,12 +157,12 @@ class SettingsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Plant Care Tracker',
+                              'PlantCare',
                               style: textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const Text('Versi 2.0.0'),
+                            const Text('Versi 0.0.2-alpha'),
                           ],
                         ),
                       ),
@@ -170,7 +170,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const Divider(height: 24),
                   Text(
-                    'Plant Care Tracker adalah aplikasi pencatat offline-first untuk melacak dan merawat tanaman hias Anda secara teratur dan terjadwal.',
+                    'PlantCare adalah aplikasi pencatat offline-first untuk melacak dan merawat tanaman hias Anda secara teratur dan terjadwal.',
                     style: textTheme.bodySmall?.copyWith(height: 1.5),
                   ),
                 ],
