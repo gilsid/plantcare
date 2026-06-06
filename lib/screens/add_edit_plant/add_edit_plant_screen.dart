@@ -550,9 +550,11 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
                                     spacing * (crossAxisCount - 1)) /
                                 crossAxisCount,
                             child: ChoiceChip(
-                              label: SizedBox.expand(
-                                child: Center(
-                                  child: Text(rowItems[j]),
+                              label: SizedBox(
+                                width: double.infinity,
+                                child: Text(
+                                  rowItems[j],
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                               selected: rowItems[j] == 'Lainnya...'
