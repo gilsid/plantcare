@@ -509,42 +509,95 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
   }
 
   Widget _buildLocationSection(bool isDark, TextTheme textTheme) {
+    final allLocations = [
+      ..._quickLocations,
+      'Lainnya...',
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ..._quickLocations.map(
-              (loc) => ChoiceChip(
-                label: Text(loc),
-                selected: !_isCustomLocation && _selectedLocation == loc,
-                onSelected: (selected) {
-                  setState(() {
-                    _isCustomLocation = false;
-                    _selectedLocation = selected ? loc : null;
-                  });
-                },
-                selectedColor: isDark
-                    ? AppColors.primaryDark.withValues(alpha: 0.2)
-                    : AppColors.primaryLight.withValues(alpha: 0.1),
-              ),
-            ),
-            ChoiceChip(
-              label: const Text('Lainnya...'),
-              selected: _isCustomLocation,
-              onSelected: (selected) {
-                setState(() {
-                  _isCustomLocation = selected;
-                  if (selected) _selectedLocation = null;
-                });
-              },
-              selectedColor: isDark
-                  ? AppColors.primaryDark.withValues(alpha: 0.2)
-                  : AppColors.primaryLight.withValues(alpha: 0.1),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth > 500 ? 3 : 2;
+            final spacing = 8.0;
+            final rows = <Widget>[];
+
+            for (var i = 0; i < allLocations.length; i += crossAxisCount) {
+              final rowItems = allLocations.sublist(
+                i,
+                i + crossAxisCount > allLocations.length
+                    ? allLocations.length
+                    : i + crossAxisCount,
+              );
+
+              rows.add(
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: i + crossAxisCount < allLocations.length
+                        ? spacing
+                        : 0,
+                  ),
+                  child: Row(
+                    children: [
+                      for (var j = 0; j < rowItems.length; j++)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            right: j < rowItems.length - 1 ? spacing : 0,
+                          ),
+                          child: SizedBox(
+                            width: (constraints.maxWidth -
+                                    spacing * (crossAxisCount - 1)) /
+                                crossAxisCount,
+                            child: ChoiceChip(
+                              label: SizedBox.expand(
+                                child: Center(
+                                  child: Text(rowItems[j]),
+                                ),
+                              ),
+                              selected: rowItems[j] == 'Lainnya...'
+                                  ? _isCustomLocation
+                                  : !_isCustomLocation &&
+                                      _selectedLocation == rowItems[j],
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (rowItems[j] == 'Lainnya...') {
+                                    _isCustomLocation = selected;
+                                    if (selected) _selectedLocation = null;
+                                  } else {
+                                    _isCustomLocation = false;
+                                    _selectedLocation =
+                                        selected ? rowItems[j] : null;
+                                  }
+                                });
+                              },
+                              selectedColor: isDark
+                                  ? AppColors.primaryDark.withValues(alpha: 0.2)
+                                  : AppColors.primaryLight
+                                      .withValues(alpha: 0.1),
+                            ),
+                          ),
+                        ),
+                      if (rowItems.length < crossAxisCount)
+                        ...List.generate(
+                          crossAxisCount - rowItems.length,
+                          (_) => SizedBox(
+                            width: (constraints.maxWidth -
+                                    spacing * (crossAxisCount - 1)) /
+                                crossAxisCount,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: rows,
+            );
+          },
         ),
         if (_isCustomLocation) ...[
           const SizedBox(height: 8),
