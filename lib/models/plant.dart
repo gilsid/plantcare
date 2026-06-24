@@ -19,6 +19,8 @@ class Plant extends HiveObject {
   final DateTime dateAdded;
 
   @HiveField(4)
+  // Deprecated: Kept only for database migration compatibility.
+  // Do NOT use for new features or business logic.
   int wateringIntervalDays;
 
   @HiveField(5)
@@ -39,8 +41,7 @@ class Plant extends HiveObject {
   @HiveField(10)
   List<GrowthEntry> growthDiary;
 
-  @HiveField(11)
-  String? roomId;
+  // Index 11 is retired (previously roomId) and must not be reused.
 
   @HiveField(12)
   String? location;
@@ -57,35 +58,9 @@ class Plant extends HiveObject {
     this.photoPath,
     List<WateringLog>? wateringHistory,
     List<GrowthEntry>? growthDiary,
-    this.roomId,
     this.location,
   }) : wateringHistory = wateringHistory ?? [],
        growthDiary = growthDiary ?? [];
 
-  DateTime get nextWateringDate {
-    final baseDate = lastWatered ?? dateAdded;
-    // Set time to the same time of day as baseDate, but we can truncate it to start of day for comparison
-    return DateTime(
-      baseDate.year,
-      baseDate.month,
-      baseDate.day,
-    ).add(Duration(days: wateringIntervalDays));
-  }
 
-  bool get isWateringOverdue {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    return today.isAfter(nextWateringDate);
-  }
-
-  int get daysUntilNextWatering {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final target = DateTime(
-      nextWateringDate.year,
-      nextWateringDate.month,
-      nextWateringDate.day,
-    );
-    return target.difference(today).inDays;
-  }
 }

@@ -79,6 +79,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
           _careTasks.addAll(
             existingTasks.map(
               (t) => _CareTaskForm(
+                id: t.id,
                 type: t.careType,
                 intervalValue: t.intervalValue,
                 intervalUnit: t.intervalUnit,
@@ -260,6 +261,39 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
               : _notesController.text.trim(),
         );
         debugPrint('[AddEditPlant] updatePlant: success');
+
+        final plantId = widget.plantId!;
+        final dbTasks = provider.getCareTasksForPlant(plantId);
+
+        // Remove tasks that are no longer in _careTasks
+        for (final dbTask in dbTasks) {
+          final stillExists = _careTasks.any((formTask) => formTask.id == dbTask.id);
+          if (!stillExists) {
+            await provider.removeCareTask(dbTask.id);
+          }
+        }
+
+        // Add new tasks or update existing tasks
+        for (final formTask in _careTasks) {
+          if (formTask.id == null) {
+            await provider.addCareTask(
+              plantId: plantId,
+              careType: formTask.type,
+              intervalValue: formTask.intervalValue,
+              intervalUnit: formTask.intervalUnit,
+            );
+          } else {
+            final dbTask = dbTasks.firstWhere((t) => t.id == formTask.id);
+            if (dbTask.intervalValue != formTask.intervalValue ||
+                dbTask.intervalUnit != formTask.intervalUnit) {
+              await provider.updateCareTask(
+                taskId: formTask.id!,
+                intervalValue: formTask.intervalValue,
+                intervalUnit: formTask.intervalUnit,
+              );
+            }
+          }
+        }
       } else {
         debugPrint('[AddEditPlant] addPlant: starting');
         final notificationFailures = await provider.addPlant(
@@ -395,15 +429,14 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              if (!_isEditing)
-                OutlinedButton.icon(
-                  onPressed: _showAddCareTaskSheet,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Tambah Perawatan Lain'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
+              OutlinedButton.icon(
+                onPressed: _showAddCareTaskSheet,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Tambah Perawatan Lain'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
                 ),
+              ),
               const SizedBox(height: 20),
               _buildSectionLabel('Catatan Perawatan (Opsional)'),
               const SizedBox(height: 8),
@@ -679,6 +712,16 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
                                   vertical: 8,
                                 ),
                               ),
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return '';
+                                }
+                                final parsed = int.tryParse(val);
+                                if (parsed == null || parsed <= 0) {
+                                  return '';
+                                }
+                                return null;
+                              },
                               onChanged: (val) {
                                 final parsed = int.tryParse(val);
                                 if (parsed != null && parsed > 0) {
@@ -690,7 +733,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: DropdownButtonFormField<IntervalUnit>(
-                              value: task.intervalUnit,
+                              initialValue: task.intervalUnit,
                               decoration: const InputDecoration(
                                 isDense: true,
                                 contentPadding: EdgeInsets.symmetric(
@@ -749,11 +792,13 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
 }
 
 class _CareTaskForm {
+  String? id;
   CareType type;
   int intervalValue;
   IntervalUnit intervalUnit;
 
   _CareTaskForm({
+    this.id,
     required this.type,
     required this.intervalValue,
     required this.intervalUnit,

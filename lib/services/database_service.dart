@@ -1,7 +1,6 @@
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:plant_care_tracker/hive_registrar.g.dart';
 import '../models/plant.dart';
-import '../models/watering_log.dart';
-import '../models/growth_entry.dart';
 import '../models/care_task.dart';
 import '../models/care_history.dart';
 
@@ -19,22 +18,7 @@ class DatabaseService {
 
   Future<void> init() async {
     await Hive.initFlutter();
-
-    if (!Hive.isAdapterRegistered(0)) {
-      Hive.registerAdapter(PlantAdapter());
-    }
-    if (!Hive.isAdapterRegistered(1)) {
-      Hive.registerAdapter(WateringLogAdapter());
-    }
-    if (!Hive.isAdapterRegistered(2)) {
-      Hive.registerAdapter(GrowthEntryAdapter());
-    }
-    if (!Hive.isAdapterRegistered(4)) {
-      Hive.registerAdapter(CareTaskAdapter());
-    }
-    if (!Hive.isAdapterRegistered(5)) {
-      Hive.registerAdapter(CareHistoryAdapter());
-    }
+    Hive.registerAdapters();
 
     _plantsBox = await Hive.openBox<Plant>(_plantsBoxName);
     _settingsBox = await Hive.openBox(_settingsBoxName);

@@ -28,7 +28,6 @@ class PlantAdapter extends TypeAdapter<Plant> {
       photoPath: fields[8] as String?,
       wateringHistory: (fields[9] as List?)?.cast<WateringLog>(),
       growthDiary: (fields[10] as List?)?.cast<GrowthEntry>(),
-      roomId: fields[11] as String?,
       location: fields[12] as String?,
     );
   }
@@ -36,7 +35,7 @@ class PlantAdapter extends TypeAdapter<Plant> {
   @override
   void write(BinaryWriter writer, Plant obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,8 +58,6 @@ class PlantAdapter extends TypeAdapter<Plant> {
       ..write(obj.wateringHistory)
       ..writeByte(10)
       ..write(obj.growthDiary)
-      ..writeByte(11)
-      ..write(obj.roomId)
       ..writeByte(12)
       ..write(obj.location);
   }

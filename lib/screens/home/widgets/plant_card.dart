@@ -201,23 +201,39 @@ class PlantCard extends StatelessWidget {
                                           : AppColors.primaryLight),
                                 size: 28,
                               ),
-                              onPressed: () {
-                                provider.completeCareTask(
+                              onPressed: () async {
+                                final success = await provider.completeCareTask(
                                   plant.id,
                                   CareType.watering,
                                 );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '${plant.name} berhasil disiram!',
+                                if (!context.mounted) return;
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${plant.name} berhasil disiram!',
+                                      ),
+                                      duration: const Duration(seconds: 2),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      behavior: SnackBarBehavior.floating,
                                     ),
-                                    duration: const Duration(seconds: 2),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text(
+                                        'Tidak ada jadwal penyiraman untuk tanaman ini',
+                                      ),
+                                      duration: const Duration(seconds: 2),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      behavior: SnackBarBehavior.floating,
                                     ),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
+                                  );
+                                }
                               },
                               tooltip: 'Siram Tanaman',
                             ),

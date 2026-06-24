@@ -19,10 +19,14 @@ class CareHistory extends HiveObject {
 
   CareType get careType => CareType.values[careTypeIndex];
 
+  @HiveField(4)
+  final bool? wasOnTime;
+
   CareHistory({
     required this.id,
     required this.plantId,
     required this.careTypeIndex,
     required this.completedAt,
+    this.wasOnTime,
   });
 }

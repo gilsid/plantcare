@@ -412,17 +412,20 @@ class PlantDetailScreen extends StatelessWidget {
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            onPressed: () {
-              provider.completeCareTask(plant.id, task.careType);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '${task.careType.displayName} untuk ${plant.name} selesai!',
+            onPressed: () async {
+              final success = await provider.completeCareTask(plant.id, task.careType);
+              if (!context.mounted) return;
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '${task.careType.displayName} untuk ${plant.name} selesai!',
+                    ),
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
                   ),
-                  duration: const Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+                );
+              }
             },
           ),
         ],

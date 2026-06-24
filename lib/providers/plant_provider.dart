@@ -106,6 +106,7 @@ class PlantProvider extends ChangeNotifier {
           plantId: plant.id,
           careTypeIndex: CareType.watering.index,
           completedAt: log.wateredAt,
+          wasOnTime: log.wasOnTime,
         );
         await _dbService.saveCareHistory(history);
         _careHistories.add(history);
@@ -194,7 +195,10 @@ class PlantProvider extends ChangeNotifier {
       if (photoPath != null &&
           plant.photoPath != null &&
           plant.photoPath != photoPath) {
-        await _imageService.deleteImage(plant.photoPath);
+        final isReferencedByDiary = plant.growthDiary.any((entry) => entry.photoPath == plant.photoPath);
+        if (!isReferencedByDiary) {
+          await _imageService.deleteImage(plant.photoPath);
+        }
       }
 
       plant.name = name;
@@ -244,18 +248,20 @@ class PlantProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> completeCareTask(String plantId, CareType careType) async {
+  Future<bool> completeCareTask(String plantId, CareType careType) async {
     final tasks = getCareTasksForPlant(plantId);
     final task = tasks.where((t) => t.careType == careType).firstOrNull;
-    if (task == null) return;
+    if (task == null) return false;
 
     final now = DateTime.now();
+    final bool wasOnTime = !task.isOverdue;
 
     final history = CareHistory(
       id: _uuid.v4(),
       plantId: plantId,
       careTypeIndex: careType.index,
       completedAt: now,
+      wasOnTime: wasOnTime,
     );
     await _dbService.saveCareHistory(history);
     _careHistories.insert(0, history);
@@ -265,8 +271,6 @@ class PlantProvider extends ChangeNotifier {
 
     final plant = _plants.firstWhere((p) => p.id == plantId);
     if (careType == CareType.watering) {
-      final bool wasOnTime = !task.isOverdue;
-
       plant.lastWatered = now;
       final log = WateringLog(
         id: _uuid.v4(),
@@ -292,6 +296,7 @@ class PlantProvider extends ChangeNotifier {
     }
 
     notifyListeners();
+    return true;
   }
 
   Future<void> updateCareTask({
@@ -455,10 +460,27 @@ class PlantProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> resetAll() async {
+    try {
+      await _notificationService.cancelAllReminders();
+      await _imageService.deleteAllImages();
+      await _dbService.clearAll();
+      _plants = [];
+      _careTasks = [];
+      _careHistories = [];
+    } catch (e, stackTrace) {
+      debugPrint('[PlantProvider] resetAll: ❌ $e');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      notifyListeners();
+    }
+  }
+
   double _calculateHealthScore(Plant plant) {
     final histories = _careHistories
         .where((h) => h.plantId == plant.id && h.careType == CareType.watering)
-        .toList();
+        .toList()
+      ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
 
     if (histories.isEmpty) {
       return _applyCurrentOverdueDeduction(100.0, plant);
@@ -467,15 +489,16 @@ class PlantProvider extends ChangeNotifier {
     final now = DateTime.now();
     final recentHistories = histories
         .where((h) => now.difference(h.completedAt).inDays <= 30)
-        .toList();
+        .toList()
+      ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
 
     final List<bool> onTimeFlags;
     if (recentHistories.length >= 5) {
-      onTimeFlags = recentHistories.take(5).map((_) => true).toList();
+      onTimeFlags = recentHistories.take(5).map((h) => h.wasOnTime ?? true).toList();
     } else if (histories.length >= 5) {
-      onTimeFlags = histories.take(5).map((_) => true).toList();
+      onTimeFlags = histories.take(5).map((h) => h.wasOnTime ?? true).toList();
     } else {
-      onTimeFlags = histories.map((_) => true).toList();
+      onTimeFlags = histories.map((h) => h.wasOnTime ?? true).toList();
     }
 
     final int onTimeCount = onTimeFlags.where((f) => f).length;

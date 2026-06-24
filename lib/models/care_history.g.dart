@@ -21,13 +21,14 @@ class CareHistoryAdapter extends TypeAdapter<CareHistory> {
       plantId: fields[1] as String,
       careTypeIndex: (fields[2] as num).toInt(),
       completedAt: fields[3] as DateTime,
+      wasOnTime: fields[4] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CareHistory obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class CareHistoryAdapter extends TypeAdapter<CareHistory> {
       ..writeByte(2)
       ..write(obj.careTypeIndex)
       ..writeByte(3)
-      ..write(obj.completedAt);
+      ..write(obj.completedAt)
+      ..writeByte(4)
+      ..write(obj.wasOnTime);
   }
 
   @override

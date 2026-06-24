@@ -55,4 +55,17 @@ class ImageService {
     }
     return false;
   }
+
+  Future<void> deleteAllImages() async {
+    try {
+      final Directory appDir = await getApplicationDocumentsDirectory();
+      final String plantsImagesDirPath = path.join(appDir.path, 'plant_images');
+      final Directory plantsImagesDir = Directory(plantsImagesDirPath);
+      if (await plantsImagesDir.exists()) {
+        await plantsImagesDir.delete(recursive: true);
+      }
+    } catch (e) {
+      debugPrint('Error deleting all images: $e');
+    }
+  }
 }

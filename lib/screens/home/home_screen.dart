@@ -94,16 +94,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               fontSize: 28,
                             ),
                           ),
-                          Text(
-                            'v0.0.2-alpha',
-                            style: textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 28,
-                              color: isDark
-                                  ? AppColors.primaryDark
-                                  : AppColors.primaryLight,
-                            ),
-                          ),
                         ],
                       ),
                       IconButton(

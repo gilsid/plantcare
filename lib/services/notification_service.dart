@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_10y.dart' as tz;
@@ -181,7 +180,13 @@ class NotificationService {
   }
 
   int _getNotificationId(String plantId, CareType careType) {
-    return plantId.hashCode ^ (careType.index * 31);
+    final String key = '$plantId-${careType.index}';
+    int hash = 2166136261;
+    for (int i = 0; i < key.length; i++) {
+      hash ^= key.codeUnitAt(i);
+      hash = (hash * 16777619) & 0xFFFFFFFF;
+    }
+    return hash.toSigned(31);
   }
 
   Future<void> scheduleCareReminder({
@@ -227,13 +232,15 @@ class NotificationService {
     final (String channelId, String title, String body, String soundName) =
         _getNotificationContent(careType, plantName);
 
+    final (String chId, String chName, String chDesc) = _getChannelInfo(careType);
+
     debugPrint('[NotificationService] scheduleCareReminder: building AndroidNotificationDetails...');
     AndroidNotificationDetails androidDetails;
     try {
       androidDetails = AndroidNotificationDetails(
-        channelId,
-        title,
-        channelDescription: body,
+        chId,
+        chName,
+        channelDescription: chDesc,
         importance: Importance.max,
         priority: Priority.high,
         sound: RawResourceAndroidNotificationSound('watering_alarm'),
@@ -267,7 +274,6 @@ class NotificationService {
         scheduledDate: tzScheduledDate,
         notificationDetails: platformDetails,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.dateAndTime,
       );
       debugPrint('[NotificationService] scheduleCareReminder: ✅ SUCCESS');
     } catch (e, stackTrace) {
@@ -340,6 +346,31 @@ class NotificationService {
     } catch (e, stackTrace) {
       debugPrint('[NotificationService] cancelAllReminders: ❌ cancelAll FAILED: $e');
       debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  (String, String, String) _getChannelInfo(CareType careType) {
+    switch (careType) {
+      case CareType.watering:
+        return (
+          _wateringChannelId,
+          'Pengingat Penyiraman',
+          'Notifikasi untuk mengingatkan Anda menyiram tanaman',
+        );
+      case CareType.fertilizing:
+        return (
+          _fertilizingChannelId,
+          'Pengingat Pemupukan',
+          'Notifikasi untuk mengingatkan Anda memupuk tanaman',
+        );
+      case CareType.pruning:
+      case CareType.pestCheck:
+      case CareType.repotting:
+        return (
+          _otherChannelId,
+          'Pengingat Perawatan Lainnya',
+          'Notifikasi untuk pengingat perawatan tanaman lainnya',
+        );
     }
   }
 }

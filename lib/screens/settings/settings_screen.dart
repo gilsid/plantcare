@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../app/theme/app_colors.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/plant_provider.dart';
-import '../../services/database_service.dart';
 import '../../widgets/confirm_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -22,13 +21,9 @@ class SettingsScreen extends StatelessWidget {
     );
 
     if (confirm == true && context.mounted) {
-      final dbService = context.read<DatabaseService>();
-      await dbService.clearAll();
+      await context.read<PlantProvider>().resetAll();
 
-      // Reload provider state
       if (context.mounted) {
-        await context.read<PlantProvider>().loadPlants();
-        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Semua data berhasil di-reset.'),
