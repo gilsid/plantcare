@@ -1,4 +1,5 @@
 import 'package:hive_ce_flutter/hive_flutter.dart';
+// ignore: uri_has_not_been_generated
 import 'package:plant_care_tracker/hive_registrar.g.dart';
 import '../models/plant.dart';
 import '../models/care_task.dart';
@@ -18,6 +19,7 @@ class DatabaseService {
 
   Future<void> init() async {
     await Hive.initFlutter();
+    // ignore: undefined_method
     Hive.registerAdapters();
 
     _plantsBox = await Hive.openBox<Plant>(_plantsBoxName);

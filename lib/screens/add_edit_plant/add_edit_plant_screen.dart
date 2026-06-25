@@ -733,7 +733,8 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: DropdownButtonFormField<IntervalUnit>(
-                              initialValue: task.intervalUnit,
+                              // ignore: deprecated_member_use
+                              value: task.intervalUnit,
                               decoration: const InputDecoration(
                                 isDense: true,
                                 contentPadding: EdgeInsets.symmetric(
