@@ -11,6 +11,8 @@ import 'screens/settings/settings_screen.dart';
 import 'screens/add_edit_plant/add_edit_plant_screen.dart';
 import 'screens/plant_detail/plant_detail_screen.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -19,7 +21,11 @@ void main() async {
   await dbService.init();
 
   final notificationService = NotificationService();
-  await notificationService.init();
+  await notificationService.init(
+    onNotificationTap: (plantId) {
+      navigatorKey.currentState?.pushNamed('/plant-detail', arguments: plantId);
+    },
+  );
   // Request notifications permission on startup
   await notificationService.requestPermissions();
 
@@ -55,6 +61,7 @@ class MyApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'PlantCare',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

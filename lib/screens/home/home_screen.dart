@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../app/theme/app_colors.dart';
 import '../../models/plant.dart';
-import '../../models/enums.dart';
 import '../../providers/plant_provider.dart';
 import 'widgets/plant_card.dart';
 import 'widgets/empty_state.dart';
@@ -37,10 +36,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (!matchesSearch) return false;
 
-      if (_selectedFilter == 'Butuh Disiram') {
+      if (_selectedFilter == 'Butuh Perawatan') {
         final provider = context.read<PlantProvider>();
         final tasks = provider.getCareTasksForPlant(plant.id);
-        return tasks.any((t) => t.careType == CareType.watering && t.isOverdue);
+        return tasks.any((t) => t.isOverdue);
       } else if (_selectedFilter == 'Sehat') {
         return plant.healthScore >= 80.0;
       }
@@ -242,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
-                        children: ['Semua', 'Butuh Disiram', 'Sehat'].map((
+                        children: ['Semua', 'Butuh Perawatan', 'Sehat'].map((
                           filter,
                         ) {
                           final isSelected = _selectedFilter == filter;

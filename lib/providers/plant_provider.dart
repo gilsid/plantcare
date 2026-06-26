@@ -269,7 +269,10 @@ class PlantProvider extends ChangeNotifier {
     task.complete();
     await _dbService.saveCareTask(task);
 
-    final plant = _plants.firstWhere((p) => p.id == plantId);
+    final plant = _plants.firstWhere(
+      (p) => p.id == plantId,
+      orElse: () => throw StateError('[completeCareTask] Plant not found: $plantId'),
+    );
     if (careType == CareType.watering) {
       plant.lastWatered = now;
       final log = WateringLog(
@@ -304,41 +307,25 @@ class PlantProvider extends ChangeNotifier {
     required int intervalValue,
     required IntervalUnit intervalUnit,
   }) async {
-    final task = _careTasks.firstWhere((t) => t.id == taskId);
+    final task = _careTasks.firstWhere(
+      (t) => t.id == taskId,
+      orElse: () => throw StateError('[updateCareTask] Task not found: $taskId'),
+    );
     task.intervalValue = intervalValue;
     task.intervalUnit = intervalUnit;
 
-    final now = DateTime.now();
-    if (task.nextDueDate.isBefore(now)) {
-      task.nextDueDate = now;
-    }
-
-    switch (intervalUnit) {
-      case IntervalUnit.hour:
-        task.nextDueDate = task.nextDueDate.add(
-          Duration(hours: intervalValue),
-        );
-      case IntervalUnit.day:
-        task.nextDueDate = task.nextDueDate.add(
-          Duration(days: intervalValue),
-        );
-      case IntervalUnit.week:
-        task.nextDueDate = task.nextDueDate.add(
-          Duration(days: 7 * intervalValue),
-        );
-      case IntervalUnit.month:
-        task.nextDueDate = DateTime(
-          task.nextDueDate.year,
-          task.nextDueDate.month + intervalValue,
-          task.nextDueDate.day,
-          task.nextDueDate.hour,
-          task.nextDueDate.minute,
-        );
-    }
+    // Hitung ulang nextDueDate dari lastCompletedDate (bukan dari sekarang),
+    // sehingga jadwal tetap konsisten dengan kapan task terakhir dilakukan.
+    // Jika belum pernah dilakukan, gunakan sekarang sebagai basis.
+    final basis = task.lastCompletedDate ?? DateTime.now();
+    task.nextDueDate = task.nextDueDateFromBasis(basis);
 
     await _dbService.saveCareTask(task);
 
-    final plant = _plants.firstWhere((p) => p.id == task.plantId);
+    final plant = _plants.firstWhere(
+      (p) => p.id == task.plantId,
+      orElse: () => throw StateError('Plant not found: ${task.plantId}'),
+    );
     try {
       await _notificationService.scheduleCareReminder(
         plantId: task.plantId,
@@ -373,7 +360,10 @@ class PlantProvider extends ChangeNotifier {
     await _dbService.saveCareTask(task);
     _careTasks.add(task);
 
-    final plant = _plants.firstWhere((p) => p.id == plantId);
+    final plant = _plants.firstWhere(
+      (p) => p.id == plantId,
+      orElse: () => throw StateError('[addCareTask] Plant not found: $plantId'),
+    );
     try {
       await _notificationService.scheduleCareReminder(
         plantId: plantId,
@@ -390,7 +380,10 @@ class PlantProvider extends ChangeNotifier {
   }
 
   Future<void> removeCareTask(String taskId) async {
-    final task = _careTasks.firstWhere((t) => t.id == taskId);
+    final task = _careTasks.firstWhere(
+      (t) => t.id == taskId,
+      orElse: () => throw StateError('[removeCareTask] Task not found: $taskId'),
+    );
     await _dbService.deleteCareTask(taskId);
     _careTasks.removeWhere((t) => t.id == taskId);
 
@@ -476,6 +469,12 @@ class PlantProvider extends ChangeNotifier {
     }
   }
 
+  /// Menghitung health score tanaman (0.0 - 100.0).
+  ///
+  /// Catatan desain: baseScore hanya dihitung dari riwayat PENYIRAMAN
+  /// karena penyiraman adalah faktor kesehatan paling kritis.
+  /// Jenis perawatan lain (pupuk, pangkas, dll) berkontribusi melalui
+  /// overdue deduction di [_applyCurrentOverdueDeduction].
   double _calculateHealthScore(Plant plant) {
     final histories = _careHistories
         .where((h) => h.plantId == plant.id && h.careType == CareType.watering)

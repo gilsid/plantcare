@@ -71,6 +71,13 @@ class CareTask extends HiveObject {
     return DateTime.now().isAfter(nextDueDate);
   }
 
+  /// Menghitung nextDueDate berdasarkan basis waktu tertentu.
+  /// Digunakan saat interval diubah, agar jadwal dihitung dari
+  /// lastCompletedDate (bukan dari DateTime.now()).
+  DateTime nextDueDateFromBasis(DateTime basis) {
+    return _addInterval(basis);
+  }
+
   Duration get timeUntilDue {
     return nextDueDate.difference(DateTime.now());
   }

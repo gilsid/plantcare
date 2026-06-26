@@ -456,7 +456,7 @@ class PlantDetailScreen extends StatelessWidget {
       case CareType.pestCheck:
         icon = Icons.bug_report;
       case CareType.repotting:
-        icon = Icons.replay;
+        icon = Icons.change_circle_outlined;
     }
     return CircleAvatar(
       radius: 18,
@@ -528,6 +528,14 @@ class _CareHistoryTab extends StatelessWidget {
                 'Riwayat akan muncul saat Anda menyelesaikan perawatan.',
                 textAlign: TextAlign.center,
                 style: textTheme.bodySmall,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Gunakan tombol di bagian atas untuk mencatat perawatan.',
+                textAlign: TextAlign.center,
+                style: textTheme.bodySmall?.copyWith(
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ],
           ),

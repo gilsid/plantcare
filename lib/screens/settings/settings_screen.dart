@@ -24,12 +24,15 @@ class SettingsScreen extends StatelessWidget {
       await context.read<PlantProvider>().resetAll();
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Semua data berhasil di-reset.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Semua data berhasil di-reset.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        });
       }
     }
   }

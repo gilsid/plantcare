@@ -12,7 +12,7 @@ class NotificationService {
   static const String _fertilizingChannelId = 'fertilizing_reminders';
   static const String _otherChannelId = 'other_care_reminders';
 
-  Future<void> init() async {
+  Future<void> init({void Function(String plantId)? onNotificationTap}) async {
     if (kIsWeb) {
       debugPrint('[NotificationService] init: skipped on Web');
       return;
@@ -48,6 +48,9 @@ class NotificationService {
         settings: initializationSettings,
         onDidReceiveNotificationResponse: (NotificationResponse details) {
           debugPrint('[NotificationService] notification response: ${details.payload}');
+          if (details.payload != null && details.payload!.isNotEmpty) {
+            onNotificationTap?.call(details.payload!);
+          }
         },
       );
       debugPrint('[NotificationService] init: plugin initialized');
@@ -280,6 +283,7 @@ class NotificationService {
         scheduledDate: tzScheduledDate,
         notificationDetails: platformDetails,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: plantId,
       );
       debugPrint('[NotificationService] scheduleCareReminder: ✅ SUCCESS');
     } catch (e, stackTrace) {

@@ -20,7 +20,6 @@ class GrowthTimeline extends StatefulWidget {
 }
 
 class _GrowthTimelineState extends State<GrowthTimeline> {
-  final ImageService _imageService = ImageService();
   final _noteController = TextEditingController();
 
   @override
@@ -30,7 +29,7 @@ class _GrowthTimelineState extends State<GrowthTimeline> {
   }
 
   Future<void> _addDiaryEntry(ImageSource source) async {
-    final path = await _imageService.pickAndSaveImage(source);
+    final path = await context.read<ImageService>().pickAndSaveImage(source);
     if (path == null) return;
 
     // Show text dialog to enter an optional note

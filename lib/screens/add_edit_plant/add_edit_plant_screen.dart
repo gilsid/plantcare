@@ -30,7 +30,6 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
   bool _isCustomLocation = false;
 
   final List<_CareTaskForm> _careTasks = [];
-  final ImageService _imageService = ImageService();
 
   static const List<String> _quickLocations = [
     'Teras',
@@ -61,7 +60,20 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<PlantProvider>();
       final plants = provider.plants;
-      final plant = plants.firstWhere((p) => p.id == widget.plantId);
+      final plant = plants.where((p) => p.id == widget.plantId).firstOrNull;
+    if (plant == null) {
+      debugPrint('[AddEditPlant] _loadPlantData: plant ${widget.plantId} not found, navigating back');
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tanaman tidak ditemukan.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
 
       _nameController.text = plant.name;
       _speciesController.text = plant.species;
@@ -110,7 +122,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     Navigator.pop(context);
-    final path = await _imageService.pickAndSaveImage(source);
+    final path = await context.read<ImageService>().pickAndSaveImage(source);
     if (path != null) {
       setState(() {
         _photoPath = path;
@@ -230,9 +242,17 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
   }
 
   void _removeCareTask(int index) {
+    final taskName = _careTasks[index].type.displayName;
     setState(() {
       _careTasks.removeAt(index);
     });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Jadwal $taskName dihapus'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _saveForm() async {
@@ -714,11 +734,11 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
                               ),
                               validator: (val) {
                                 if (val == null || val.trim().isEmpty) {
-                                  return '';
+                                  return 'Wajib diisi';
                                 }
                                 final parsed = int.tryParse(val);
                                 if (parsed == null || parsed <= 0) {
-                                  return '';
+                                  return 'Harus lebih dari 0';
                                 }
                                 return null;
                               },
@@ -782,7 +802,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
       case CareType.pestCheck:
         icon = Icons.bug_report;
       case CareType.repotting:
-        icon = Icons.replay;
+        icon = Icons.change_circle_outlined;
     }
     return CircleAvatar(
       radius: 18,
