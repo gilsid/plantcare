@@ -31,15 +31,16 @@ class PlantDetailScreen extends StatelessWidget {
     );
 
     if (confirm == true && context.mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
       await context.read<PlantProvider>().deletePlant(plant.id);
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Tanaman berhasil dihapus.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
-      Navigator.pop(context);
+      navigator.pop();
     }
   }
 
@@ -77,7 +78,7 @@ class PlantDetailScreen extends StatelessWidget {
           );
         }
 
-        final tasks = provider.getCareTasksForPlant(plant.id);
+        final careTasks = provider.getCareTasksForPlant(plant.id);
         final careHistories = provider.getCareHistoriesForPlant(plant.id);
         final String addedDateFormatted = DateFormat(
           'dd MMMM yyyy',
@@ -421,13 +422,15 @@ class PlantDetailScreen extends StatelessWidget {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final taskName = task.careType.displayName;
+              final plantName = plant.name;
               final success = await provider.completeCareTask(plant.id, task.careType);
-              if (!context.mounted) return;
               if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text(
-                      '${task.careType.displayName} untuk ${plant.name} selesai!',
+                      '$taskName untuk $plantName selesai!',
                     ),
                     duration: const Duration(seconds: 2),
                     behavior: SnackBarBehavior.floating,

@@ -200,16 +200,17 @@ class PlantCard extends StatelessWidget {
                                 size: 28,
                               ),
                               onPressed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
+                                final name = plant.name;
                                 final success = await provider.completeCareTask(
                                   plant.id,
                                   CareType.watering,
                                 );
-                                if (!context.mounted) return;
                                 if (success) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        '${plant.name} berhasil disiram!',
+                                        '$name berhasil disiram!',
                                       ),
                                       duration: const Duration(seconds: 2),
                                       shape: RoundedRectangleBorder(
@@ -219,7 +220,7 @@ class PlantCard extends StatelessWidget {
                                     ),
                                   );
                                 } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
                                       content: const Text(
                                         'Tidak ada jadwal penyiraman untuk tanaman ini',

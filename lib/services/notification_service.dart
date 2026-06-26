@@ -235,7 +235,7 @@ class NotificationService {
       return;
     }
 
-    final (String channelId, String title, String body, String soundName) =
+    final (String _, String title, String body, String _) =
         _getNotificationContent(careType, plantName);
 
     final (String chId, String chName, String chDesc) = _getChannelInfo(careType);
