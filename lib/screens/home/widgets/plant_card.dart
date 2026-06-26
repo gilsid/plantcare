@@ -19,37 +19,35 @@ class PlantCard extends StatelessWidget {
 
     if (tasks.isEmpty) return 'Tidak ada jadwal perawatan';
 
-    final wateringTask =
-        tasks.where((t) => t.careType == CareType.watering).firstOrNull;
+    final overdueTasks = tasks.where((t) => t.isOverdue).toList()
+      ..sort((a, b) => a.nextDueDate.compareTo(b.nextDueDate));
 
-    if (wateringTask != null) {
-      if (wateringTask.isOverdue) {
-        final daysLate =
-            DateTime.now().difference(wateringTask.nextDueDate).inDays;
-        if (daysLate == 0) return 'Waktunya siram!';
-        return 'Terlambat $daysLate hari';
-      }
-      final hours = wateringTask.timeUntilDue.inHours;
-      if (hours <= 1) return 'Siram sebentar lagi';
-      if (hours < 24) return 'Siram dalam $hours jam';
-      final days = hours ~/ 24;
-      if (days == 0) return 'Siram hari ini';
-      if (days == 1) return 'Siram besok';
-      return 'Siram dalam $days hari';
+    if (overdueTasks.isNotEmpty) {
+      final urgent = overdueTasks.first;
+      final daysLate = DateTime.now().difference(urgent.nextDueDate).inDays;
+      if (daysLate == 0) return '${urgent.careType.displayName} hari ini!';
+      return '${urgent.careType.displayName} terlambat $daysLate hari';
     }
 
-    return '${tasks.length} jadwal perawatan';
+    final upcoming = tasks.toList()
+      ..sort((a, b) => a.nextDueDate.compareTo(b.nextDueDate));
+    final next = upcoming.first;
+    final hours = next.timeUntilDue.inHours;
+    if (hours <= 1) return '${next.careType.displayName} sebentar lagi';
+    if (hours < 24) return '${next.careType.displayName} dalam $hours jam';
+    final days = hours ~/ 24;
+    if (days == 1) return '${next.careType.displayName} besok';
+    return '${next.careType.displayName} dalam $days hari';
   }
 
   Color _getStatusColor(Plant plant, BuildContext context) {
     final provider = context.read<PlantProvider>();
     final tasks = provider.getCareTasksForPlant(plant.id);
-    final overdue = tasks.any((t) => t.isOverdue);
-    if (overdue) return AppColors.error;
+    if (tasks.any((t) => t.isOverdue)) return AppColors.error;
 
-    final wateringTask =
-        tasks.where((t) => t.careType == CareType.watering).firstOrNull;
-    if (wateringTask != null && wateringTask.isDueSoon) {
+    final upcoming = tasks.toList()
+      ..sort((a, b) => a.nextDueDate.compareTo(b.nextDueDate));
+    if (upcoming.isNotEmpty && upcoming.first.isDueSoon) {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       return isDark ? AppColors.primaryDark : AppColors.primaryLight;
     }
@@ -183,16 +181,35 @@ class PlantCard extends StatelessWidget {
                         final wateringTask = tasks.where(
                           (t) => t.careType == CareType.watering,
                         ).firstOrNull;
-                        final isOverdue =
+                        final isWateringOverdue =
                             wateringTask?.isOverdue ?? false;
+                        final totalOverdue = tasks.where((t) => t.isOverdue).length;
                         return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            if (totalOverdue > 1)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '$totalOverdue',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             IconButton(
                               icon: Icon(
-                                isOverdue
+                                isWateringOverdue
                                     ? Icons.water_drop
                                     : Icons.water_drop_outlined,
-                                color: isOverdue
+                                color: isWateringOverdue
                                     ? AppColors.error
                                     : (isDark
                                           ? AppColors.primaryDark
@@ -241,7 +258,7 @@ class PlantCard extends StatelessWidget {
                               style: textTheme.bodySmall?.copyWith(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
-                                color: isOverdue
+                                color: isWateringOverdue
                                     ? AppColors.error
                                     : (isDark
                                           ? AppColors.textSecondaryDark

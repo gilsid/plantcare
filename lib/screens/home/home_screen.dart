@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../app/theme/app_colors.dart';
 import '../../models/plant.dart';
+import '../../models/enums.dart';
 import '../../providers/plant_provider.dart';
 import 'widgets/plant_card.dart';
 import 'widgets/empty_state.dart';
+
+enum PlantSortOption {
+  dateAdded,
+  nameAZ,
+  healthDesc,
+  mostUrgent,
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,6 +24,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   String _selectedFilter = 'Semua';
+  PlantSortOption _sortOption = PlantSortOption.dateAdded;
 
   @override
   void initState() {
@@ -58,6 +67,68 @@ class _HomeScreenState extends State<HomeScreen> {
     return count;
   }
 
+  List<Plant> _getSortedPlants(List<Plant> plants) {
+    final provider = context.read<PlantProvider>();
+    final sorted = List<Plant>.from(plants);
+    switch (_sortOption) {
+      case PlantSortOption.dateAdded:
+        break;
+      case PlantSortOption.nameAZ:
+        sorted.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      case PlantSortOption.healthDesc:
+        sorted.sort((a, b) => b.healthScore.compareTo(a.healthScore));
+      case PlantSortOption.mostUrgent:
+        sorted.sort((a, b) {
+          final aOverdue = provider.getCareTasksForPlant(a.id).where((t) => t.isOverdue).length;
+          final bOverdue = provider.getCareTasksForPlant(b.id).where((t) => t.isOverdue).length;
+          return bOverdue.compareTo(aOverdue);
+        });
+    }
+    return sorted;
+  }
+
+  String _sortLabel(PlantSortOption opt) {
+    switch (opt) {
+      case PlantSortOption.dateAdded:  return 'Terbaru';
+      case PlantSortOption.nameAZ:     return 'Nama A–Z';
+      case PlantSortOption.healthDesc: return 'Terhealthy';
+      case PlantSortOption.mostUrgent: return 'Paling Urgent';
+    }
+  }
+
+  Future<void> _completeAllOverdueWatering(
+    BuildContext context,
+    List<Plant> plants,
+  ) async {
+    final provider = context.read<PlantProvider>();
+
+    final overdueWateringPlants = plants.where((plant) {
+      final tasks = provider.getCareTasksForPlant(plant.id);
+      return tasks.any((t) => t.careType == CareType.watering && t.isOverdue);
+    }).toList();
+
+    if (overdueWateringPlants.isEmpty) return;
+
+    int success = 0;
+    for (final plant in overdueWateringPlants) {
+      final result = await provider.completeCareTask(plant.id, CareType.watering);
+      if (result) success++;
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$success tanaman berhasil disiram sekaligus!',
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.success,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -72,7 +143,8 @@ class _HomeScreenState extends State<HomeScreen> {
             }
 
             final allPlants = provider.plants;
-            final filteredPlants = _getFilteredPlants(allPlants);
+            final sortedPlants = _getSortedPlants(allPlants);
+            final filteredPlants = _getFilteredPlants(sortedPlants);
             final overdueCount = _getOverdueCount(allPlants);
 
             return Column(
@@ -176,6 +248,33 @@ class _HomeScreenState extends State<HomeScreen> {
                                   height: 1.4,
                                 ),
                               ),
+                              if (overdueCount > 0) ...[
+                                const SizedBox(height: 10),
+                                GestureDetector(
+                                  onTap: () => _completeAllOverdueWatering(context, allPlants),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.error,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.water_drop, color: Colors.white, size: 14),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Siram semua yang overdue',
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -232,6 +331,55 @@ class _HomeScreenState extends State<HomeScreen> {
                               )
                             : null,
                       ),
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Urutkan:',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ...PlantSortOption.values.map((opt) {
+                          final isSelected = _sortOption == opt;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: GestureDetector(
+                              onTap: () => setState(() => _sortOption = opt),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? (isDark ? AppColors.primaryDark : AppColors.primaryLight)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? (isDark ? AppColors.primaryDark : AppColors.primaryLight)
+                                        : (isDark ? const Color(0xFF252D2A) : const Color(0xFFE2E2DC)),
+                                  ),
+                                ),
+                                child: Text(
+                                  _sortLabel(opt),
+                                  style: textTheme.bodySmall?.copyWith(
+                                    fontSize: 11,
+                                    color: isSelected
+                                        ? (isDark ? Colors.black : Colors.white)
+                                        : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
                     ),
                   ),
 

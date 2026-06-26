@@ -10,7 +10,6 @@ import '../../providers/plant_provider.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/health_bar.dart';
 import '../../widgets/plant_image.dart';
-import 'widgets/watering_history.dart';
 import 'widgets/growth_timeline.dart';
 
 class PlantDetailScreen extends StatelessWidget {
@@ -62,6 +61,26 @@ class PlantDetailScreen extends StatelessWidget {
     return 'Dalam $days hari';
   }
 
+  String _getDurationText(DateTime dateAdded) {
+    final now = DateTime.now();
+    final diff = now.difference(dateAdded);
+    final days = diff.inDays;
+
+    if (days < 7) return 'Baru ditambahkan $days hari lalu';
+    if (days < 30) {
+      final weeks = days ~/ 7;
+      return 'Dirawat selama $weeks minggu';
+    }
+    if (days < 365) {
+      final months = days ~/ 30;
+      return 'Dirawat selama $months bulan';
+    }
+    final years = days ~/ 365;
+    final remainMonths = (days % 365) ~/ 30;
+    if (remainMonths == 0) return 'Dirawat selama $years tahun';
+    return 'Dirawat selama $years tahun $remainMonths bulan';
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -86,7 +105,7 @@ class PlantDetailScreen extends StatelessWidget {
 
         return Scaffold(
           body: DefaultTabController(
-            length: 3,
+            length: 2,
             child: NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
@@ -295,12 +314,62 @@ class PlantDetailScreen extends StatelessWidget {
                               textTheme,
                             )),
 
-                            const SizedBox(height: 8),
-                            Text(
-                              'Ditambahkan pada $addedDateFormatted',
-                              style: textTheme.bodySmall?.copyWith(
-                                fontSize: 11,
+                            if (careHistories.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildStatTile(
+                                      context: context,
+                                      label: 'Total Perawatan',
+                                      value: '${careHistories.length}x',
+                                      icon: Icons.check_circle_outline_rounded,
+                                      isDark: isDark,
+                                      textTheme: textTheme,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildStatTile(
+                                      context: context,
+                                      label: 'Tepat Waktu',
+                                      value: () {
+                                        final onTime = careHistories
+                                            .where((h) => h.wasOnTime == true)
+                                            .length;
+                                        final pct = (onTime / careHistories.length * 100).round();
+                                        return '$pct%';
+                                      }(),
+                                      icon: Icons.timer_outlined,
+                                      isDark: isDark,
+                                      textTheme: textTheme,
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ],
+
+                            const SizedBox(height: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Ditambahkan pada $addedDateFormatted',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    fontSize: 11,
+                                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _getDurationText(plant.dateAdded),
+                                  style: textTheme.bodySmall?.copyWith(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 16),
                           ],
@@ -328,7 +397,6 @@ class PlantDetailScreen extends StatelessWidget {
                         unselectedLabelStyle: textTheme.bodyMedium,
                         tabs: const [
                           Tab(text: 'Riwayat Perawatan'),
-                          Tab(text: 'Riwayat Siram'),
                           Tab(text: 'Diary Tumbuh'),
                         ],
                       ),
@@ -339,7 +407,6 @@ class PlantDetailScreen extends StatelessWidget {
               body: TabBarView(
                 children: [
                   _CareHistoryTab(histories: careHistories),
-                  WateringHistory(plant: plant),
                   GrowthTimeline(plant: plant),
                 ],
               ),
@@ -400,6 +467,8 @@ class PlantDetailScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 6),
+                _buildCareProgress(task),
               ],
             ),
           ),
@@ -438,6 +507,84 @@ class PlantDetailScreen extends StatelessWidget {
                 );
               }
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCareProgress(CareTask task) {
+    final totalDuration = task.intervalUnit == IntervalUnit.hour
+        ? Duration(hours: task.intervalValue)
+        : task.intervalUnit == IntervalUnit.day
+            ? Duration(days: task.intervalValue)
+            : task.intervalUnit == IntervalUnit.week
+                ? Duration(days: task.intervalValue * 7)
+                : Duration(days: task.intervalValue * 30);
+
+    final elapsed = task.lastCompletedDate != null
+        ? DateTime.now().difference(task.lastCompletedDate!)
+        : totalDuration;
+
+    final progress = totalDuration.inSeconds > 0
+        ? (elapsed.inSeconds / totalDuration.inSeconds).clamp(0.0, 1.0)
+        : 1.0;
+
+    final Color trackColor = task.isOverdue ? AppColors.error : AppColors.success;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: LinearProgressIndicator(
+        value: progress,
+        minHeight: 4,
+        backgroundColor: trackColor.withValues(alpha: 0.12),
+        valueColor: AlwaysStoppedAnimation<Color>(
+          trackColor.withValues(alpha: task.isOverdue ? 0.7 : 0.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatTile({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required IconData icon,
+    required bool isDark,
+    required TextTheme textTheme,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF252D2A) : const Color(0xFFE2E2DC),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                ),
+              ),
+              Text(
+                label,
+                style: textTheme.bodySmall?.copyWith(fontSize: 10),
+              ),
+            ],
           ),
         ],
       ),

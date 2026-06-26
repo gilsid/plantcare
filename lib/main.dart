@@ -10,6 +10,7 @@ import 'screens/home/home_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/add_edit_plant/add_edit_plant_screen.dart';
 import 'screens/plant_detail/plant_detail_screen.dart';
+import 'screens/onboarding/onboarding_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -19,6 +20,8 @@ void main() async {
   // Initialize Core Services
   final dbService = DatabaseService();
   await dbService.init();
+
+  final hasSeenOnboarding = dbService.getOnboardingSeen();
 
   final notificationService = NotificationService();
   await notificationService.init(
@@ -48,13 +51,14 @@ void main() async {
           ),
         ),
       ],
-      child: const MyApp(),
+      child: MyApp(hasSeenOnboarding: hasSeenOnboarding),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool hasSeenOnboarding;
+  const MyApp({super.key, required this.hasSeenOnboarding});
 
   @override
   Widget build(BuildContext context) {
@@ -67,16 +71,29 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
-      initialRoute: '/',
+      initialRoute: hasSeenOnboarding ? '/' : '/onboarding',
       routes: {
         '/': (context) => const HomeScreen(),
         '/settings': (context) => const SettingsScreen(),
+        '/onboarding': (context) => const OnboardingScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/plant-detail') {
           final String plantId = settings.arguments as String;
-          return MaterialPageRoute(
-            builder: (context) => PlantDetailScreen(plantId: plantId),
+          return PageRouteBuilder(
+            settings: settings,
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                PlantDetailScreen(plantId: plantId),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeInOut,
+                ),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 280),
           );
         }
         if (settings.name == '/add-edit-plant') {
