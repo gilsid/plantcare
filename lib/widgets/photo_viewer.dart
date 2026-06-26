@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'plant_image.dart';
 
 class PhotoViewer extends StatelessWidget {
   final String photoPath;
@@ -32,8 +32,8 @@ class PhotoViewer extends StatelessWidget {
           child: InteractiveViewer(
             minScale: 0.8,
             maxScale: 4.0,
-            child: Image.file(
-              File(photoPath),
+            child: PlantImage(
+              photoPath: photoPath,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
                 return const Icon(

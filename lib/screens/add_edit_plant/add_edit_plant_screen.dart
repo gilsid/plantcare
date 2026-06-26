@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +5,7 @@ import '../../app/theme/app_colors.dart';
 import '../../models/enums.dart';
 import '../../providers/plant_provider.dart';
 import '../../services/image_service.dart';
+import '../../widgets/plant_image.dart';
 
 class AddEditPlantScreen extends StatefulWidget {
   final String? plantId;
@@ -496,7 +496,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
                 ),
                 image: _photoPath != null
                     ? DecorationImage(
-                        image: FileImage(File(_photoPath!)),
+                        image: getPlantImageProvider(_photoPath)!,
                         fit: BoxFit.cover,
                       )
                     : null,

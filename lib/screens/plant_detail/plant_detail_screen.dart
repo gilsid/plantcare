@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +9,7 @@ import '../../models/enums.dart';
 import '../../providers/plant_provider.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/health_bar.dart';
+import '../../widgets/plant_image.dart';
 import 'widgets/watering_history.dart';
 import 'widgets/growth_timeline.dart';
 
@@ -48,15 +48,17 @@ class PlantDetailScreen extends StatelessWidget {
       final diff = DateTime.now().difference(task.nextDueDate);
       final hours = diff.inHours;
       if (hours < 24) return 'Terlambat $hours jam!';
-      return 'Terlambat ${diff.inDays} hari!';
+      final days = diff.inDays;
+      return 'Terlambat $days hari!';
     }
-    final hours = task.timeUntilDue.inHours;
-    if (hours <= 1) return 'Sebentar lagi';
-    if (hours < 24) return 'Dalam $hours jam';
-    final days = hours ~/ 24;
-    if (days == 0) return 'Hari ini';
-    if (days == 1) return 'Besok';
-    return '$days hari lagi';
+    final diff = task.nextDueDate.difference(DateTime.now());
+    final hours = diff.inHours;
+    if (hours < 24) {
+      if (hours <= 0) return 'Hari ini';
+      return 'Dalam $hours jam';
+    }
+    final days = diff.inDays;
+    return 'Dalam $days hari';
   }
 
   @override
@@ -66,17 +68,16 @@ class PlantDetailScreen extends StatelessWidget {
 
     return Consumer<PlantProvider>(
       builder: (context, provider, child) {
-        final plantIndex = provider.plants.indexWhere((p) => p.id == plantId);
-        if (plantIndex == -1) {
+        final plants = provider.plants;
+        final plant = plants.where((p) => p.id == plantId).firstOrNull;
+
+        if (plant == null) {
           return const Scaffold(
-            body: Center(
-              child: Text('Tanaman tidak ditemukan atau telah dihapus.'),
-            ),
+            body: Center(child: Text('Tanaman tidak ditemukan.')),
           );
         }
 
-        final plant = provider.plants[plantIndex];
-        final careTasks = provider.getCareTasksForPlant(plant.id);
+        final tasks = provider.getCareTasksForPlant(plant.id);
         final careHistories = provider.getCareHistoriesForPlant(plant.id);
         final String addedDateFormatted = DateFormat(
           'dd MMMM yyyy',
@@ -91,10 +92,6 @@ class PlantDetailScreen extends StatelessWidget {
                   SliverAppBar(
                     expandedHeight: 280,
                     pinned: true,
-                    backgroundColor: isDark
-                        ? AppColors.backgroundDark
-                        : AppColors.primaryLight,
-                    iconTheme: const IconThemeData(color: Colors.white),
                     actions: [
                       IconButton(
                         icon: const Icon(Icons.edit_outlined),
@@ -112,32 +109,43 @@ class PlantDetailScreen extends StatelessWidget {
                       ),
                     ],
                     flexibleSpace: FlexibleSpaceBar(
+                      title: Text(
+                        plant.name,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: const [
+                            Shadow(
+                              offset: Offset(0, 1),
+                              blurRadius: 4.0,
+                              color: Colors.black54,
+                            ),
+                          ],
+                        ),
+                      ),
                       background: Stack(
                         fit: StackFit.expand,
                         children: [
                           Hero(
                             tag: 'plant_image_${plant.id}',
-                            child:
-                                plant.photoPath != null &&
-                                    plant.photoPath!.isNotEmpty
-                                ? Image.file(
-                                    File(plant.photoPath!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : Container(
-                                    color: isDark
-                                        ? const Color(0xFF1E2421)
-                                        : const Color(0xFFECECE5),
-                                    child: Icon(
-                                      Icons.local_florist,
-                                      size: 110,
-                                      color: isDark
-                                          ? AppColors.textSecondaryDark
-                                          : AppColors.primaryLight.withValues(
-                                              alpha: 0.4,
-                                            ),
-                                    ),
-                                  ),
+                            child: PlantImage(
+                              photoPath: plant.photoPath,
+                              fit: BoxFit.cover,
+                              placeholder: Container(
+                                color: isDark
+                                    ? const Color(0xFF1E2421)
+                                    : const Color(0xFFECECE5),
+                                child: Icon(
+                                  Icons.local_florist,
+                                  size: 110,
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.primaryLight.withValues(
+                                          alpha: 0.4,
+                                        ),
+                                ),
+                              ),
+                            ),
                           ),
                           const DecoratedBox(
                             decoration: BoxDecoration(

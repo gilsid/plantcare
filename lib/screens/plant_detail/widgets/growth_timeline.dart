@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +8,7 @@ import '../../../providers/plant_provider.dart';
 import '../../../services/image_service.dart';
 import '../../../widgets/confirm_dialog.dart';
 import '../../../widgets/photo_viewer.dart';
+import '../../../widgets/plant_image.dart';
 
 class GrowthTimeline extends StatefulWidget {
   final Plant plant;
@@ -299,19 +299,16 @@ class _GrowthTimelineState extends State<GrowthTimeline> {
                             ),
                           );
                         },
-                        child: Container(
+                        child: PlantImage(
+                          photoPath: entry.photoPath,
+                          fit: BoxFit.cover,
                           height: 140,
                           width: double.infinity,
-                          color: isDark ? Colors.black12 : Colors.grey[100],
-                          child: Image.file(
-                            File(entry.photoPath),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
-                                child: Icon(Icons.broken_image, size: 36),
-                              );
-                            },
-                          ),
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(Icons.broken_image, size: 36),
+                            );
+                          },
                         ),
                       ),
                       // Text Description

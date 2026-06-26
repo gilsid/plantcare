@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
@@ -6,6 +5,7 @@ import '../../../models/plant.dart';
 import '../../../models/enums.dart';
 import '../../../providers/plant_provider.dart';
 import '../../../widgets/health_bar.dart';
+import '../../../widgets/plant_image.dart';
 
 class PlantCard extends StatelessWidget {
   final Plant plant;
@@ -83,24 +83,22 @@ class PlantCard extends StatelessWidget {
                       color: isDark
                           ? const Color(0xFF252D2A)
                           : const Color(0xFFECECE5),
-                      child:
-                          plant.photoPath != null && plant.photoPath!.isNotEmpty
-                          ? Image.file(
-                              File(plant.photoPath!),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Icon(Icons.broken_image, size: 32);
-                              },
-                            )
-                          : Icon(
-                              Icons.local_florist,
-                              size: 40,
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.primaryLight.withValues(
-                                      alpha: 0.5,
-                                    ),
-                            ),
+                      child: PlantImage(
+                        photoPath: plant.photoPath,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.broken_image, size: 32);
+                        },
+                        placeholder: Icon(
+                          Icons.local_florist,
+                          size: 40,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.primaryLight.withValues(
+                                  alpha: 0.5,
+                                ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

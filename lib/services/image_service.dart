@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,6 +17,22 @@ class ImageService {
       );
 
       if (pickedFile == null) return null;
+
+      if (kIsWeb) {
+        // On web, read the image as bytes and convert to a base64 Data URL so it can be saved persistently in Hive.
+        final bytes = await pickedFile.readAsBytes();
+        final String base64String = base64Encode(bytes);
+        final String extension = path.extension(pickedFile.path).toLowerCase();
+        String mimeType = 'image/png';
+        if (extension == '.jpg' || extension == '.jpeg') {
+          mimeType = 'image/jpeg';
+        } else if (extension == '.gif') {
+          mimeType = 'image/gif';
+        } else if (extension == '.webp') {
+          mimeType = 'image/webp';
+        }
+        return 'data:$mimeType;base64,$base64String';
+      }
 
       // Get app directory to store files persistently
       final Directory appDir = await getApplicationDocumentsDirectory();
@@ -44,6 +61,7 @@ class ImageService {
 
   Future<bool> deleteImage(String? filePath) async {
     if (filePath == null || filePath.isEmpty) return false;
+    if (kIsWeb || filePath.startsWith('data:image/')) return true;
     try {
       final File file = File(filePath);
       if (await file.exists()) {
@@ -57,6 +75,7 @@ class ImageService {
   }
 
   Future<void> deleteAllImages() async {
+    if (kIsWeb) return;
     try {
       final Directory appDir = await getApplicationDocumentsDirectory();
       final String plantsImagesDirPath = path.join(appDir.path, 'plant_images');

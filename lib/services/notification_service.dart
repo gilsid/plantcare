@@ -13,6 +13,10 @@ class NotificationService {
   static const String _otherChannelId = 'other_care_reminders';
 
   Future<void> init() async {
+    if (kIsWeb) {
+      debugPrint('[NotificationService] init: skipped on Web');
+      return;
+    }
     debugPrint('[NotificationService] init: initializing timezones...');
     try {
       tz.initializeTimeZones();
@@ -131,6 +135,7 @@ class NotificationService {
   }
 
   Future<bool> requestPermissions() async {
+    if (kIsWeb) return false;
     debugPrint('[NotificationService] requestPermissions: requesting Android notification permission...');
 
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
@@ -195,6 +200,7 @@ class NotificationService {
     required CareType careType,
     required DateTime nextDueDate,
   }) async {
+    if (kIsWeb) return;
     final int id = _getNotificationId(plantId, careType);
     debugPrint('[NotificationService] scheduleCareReminder: id=$id plant=$plantName type=$careType nextDueDate=$nextDueDate');
 
@@ -327,6 +333,7 @@ class NotificationService {
   }
 
   Future<void> cancelCareReminder(String plantId, CareType careType) async {
+    if (kIsWeb) return;
     final int id = _getNotificationId(plantId, careType);
     debugPrint('[NotificationService] cancelCareReminder: cancelling id=$id for plant=$plantId type=$careType');
     try {
@@ -339,6 +346,7 @@ class NotificationService {
   }
 
   Future<void> cancelAllReminders() async {
+    if (kIsWeb) return;
     debugPrint('[NotificationService] cancelAllReminders: cancelling all...');
     try {
       await _notificationsPlugin.cancelAll();
