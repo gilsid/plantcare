@@ -57,7 +57,3 @@ lib/
 ├── services/       — core services (database, notifications, images)
 └── widgets/        — reusable UI components
 ```
-
-## License
-
-MIT
