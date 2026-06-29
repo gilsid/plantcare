@@ -289,7 +289,8 @@ class NotificationService {
     } catch (e, stackTrace) {
       debugPrint('[NotificationService] scheduleCareReminder: ❌ zonedSchedule FAILED: $e');
       debugPrintStack(stackTrace: stackTrace);
-      rethrow;
+      // Do NOT rethrow — failure to schedule notification should not
+      // block the plant from being saved.
     }
   }
 
@@ -358,6 +359,44 @@ class NotificationService {
     } catch (e, stackTrace) {
       debugPrint('[NotificationService] cancelAllReminders: ❌ cancelAll FAILED: $e');
       debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  /// Kirim notifikasi tes langsung (immediate, bukan scheduled).
+  /// Digunakan dari tombol tes di Settings.
+  Future<bool> showTestNotification() async {
+    if (kIsWeb) return false;
+    debugPrint('[NotificationService] showTestNotification: sending immediate test notification...');
+    try {
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'watering_reminders',
+        'Pengingat Penyiraman',
+        channelDescription: 'Notifikasi untuk mengingatkan Anda menyiram tanaman',
+        importance: Importance.max,
+        priority: Priority.high,
+        enableVibration: true,
+      );
+      const DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      const NotificationDetails platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iOSDetails,
+      );
+      await _notificationsPlugin.show(
+        id: 99999,
+        title: '🌿 PlantCare — Tes Notifikasi',
+        body: 'Notifikasi berfungsi dengan baik! Tanaman kamu tidak akan terlewat.',
+        notificationDetails: platformDetails,
+      );
+      debugPrint('[NotificationService] showTestNotification: ✅ sent');
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationService] showTestNotification: ❌ FAILED: $e');
+      debugPrintStack(stackTrace: stackTrace);
+      return false;
     }
   }
 

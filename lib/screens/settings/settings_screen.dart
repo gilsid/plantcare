@@ -4,6 +4,7 @@ import '../../app/theme/app_colors.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/plant_provider.dart';
 import '../../services/database_service.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/confirm_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -183,6 +184,49 @@ subtitle: const Text('Menghapus semua data tanaman dan riwayat'),
 trailing: const Icon(Icons.chevron_right),
 onTap: () => _resetApp(context),
 ),
+),
+const SizedBox(height: 24),
+
+// Notification Section
+Text(
+  'Notifikasi',
+  style: textTheme.bodySmall?.copyWith(
+    fontWeight: FontWeight.bold,
+    color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+  ),
+),
+const SizedBox(height: 10),
+Card(
+  child: ListTile(
+    leading: CircleAvatar(
+      backgroundColor: isDark
+          ? AppColors.primaryDark.withValues(alpha: 0.1)
+          : AppColors.primaryLight.withValues(alpha: 0.1),
+      child: Icon(
+        Icons.notifications_active_outlined,
+        color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+      ),
+    ),
+    title: const Text('Tes Notifikasi'),
+    subtitle: const Text('Kirim notifikasi tes langsung ke perangkat'),
+    trailing: const Icon(Icons.send_outlined),
+    onTap: () async {
+      final success = await context.read<NotificationService>().showTestNotification();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success
+                  ? 'Notifikasi tes berhasil dikirim!'
+                  : 'Gagal mengirim notifikasi tes.',
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: success ? AppColors.success : AppColors.error,
+          ),
+        );
+      }
+    },
+  ),
 ),
 const SizedBox(height: 24),
 

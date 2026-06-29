@@ -177,34 +177,38 @@ children: [
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _greeting(),
-                          style: textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 28,
-                          ),
-                        ),
-                        if (context.read<PlantProvider>().getStreakCount() > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.local_fire_department, size: 14, color: Colors.orange),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${context.read<PlantProvider>().getStreakCount()} hari streak',
-                                  style: textTheme.bodySmall?.copyWith(
-                                    color: Colors.orange,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _greeting(),
+                            style: textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 28,
                             ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
-                      ],
+                          if (context.read<PlantProvider>().getStreakCount() > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.local_fire_department, size: 14, color: Colors.orange),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${context.read<PlantProvider>().getStreakCount()} hari streak',
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                     Row(
 mainAxisSize: MainAxisSize.min,

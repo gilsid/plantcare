@@ -111,7 +111,8 @@ headerSliverBuilder: (context, innerBoxIsScrolled) {
 return [
 SliverAppBar(
 expandedHeight: 280,
-pinned: true,
+pinned: false,
+floating: true,
 actions: [
 IconButton(
 icon: const Icon(Icons.edit_outlined),
@@ -232,45 +233,45 @@ color: isDark
 ],
 const SizedBox(height: 16),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.surfaceDark
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF252D2A)
-                              : const Color(0xFFE2E2DC),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Kesehatan',
-                                style: textTheme.bodySmall,
-                              ),
-                              const Spacer(),
-                              _buildTrend(context, provider, plant.id) ?? const SizedBox.shrink(),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          HealthBar(
-                            score: plant.healthScore,
-                            height: 6,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+Row(
+children: [
+Expanded(
+child: Container(
+padding: const EdgeInsets.all(16),
+decoration: BoxDecoration(
+color: isDark
+? AppColors.surfaceDark
+: Colors.white,
+borderRadius: BorderRadius.circular(16),
+border: Border.all(
+color: isDark
+? const Color(0xFF252D2A)
+: const Color(0xFFE2E2DC),
+),
+),
+child: Column(
+crossAxisAlignment:
+CrossAxisAlignment.start,
+children: [
+Row(
+children: [
+Text(
+'Kesehatan',
+style: textTheme.bodySmall,
+),
+const Spacer(),
+_buildTrend(context, provider, plant.id) ?? const SizedBox.shrink(),
+],
+),
+const SizedBox(height: 8),
+HealthBar(
+score: plant.healthScore,
+height: 6,
+),
+],
+),
+),
+),
 const SizedBox(width: 12),
 Expanded(
 child: Container(
@@ -424,45 +425,45 @@ GrowthTimeline(plant: plant),
 );
 }
 
-  Widget? _buildTrend(BuildContext context, PlantProvider provider, String plantId) {
-    final trend = provider.getHealthTrend(plantId);
-    if (trend == null) return null;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(trend.icon, size: 14, color: trend.color),
-        const SizedBox(width: 2),
-        Text(
-          trend.label,
-          style: TextStyle(
-            fontSize: 10,
-            color: trend.color,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
+Widget? _buildTrend(BuildContext context, PlantProvider provider, String plantId) {
+final trend = provider.getHealthTrend(plantId);
+if (trend == null) return null;
+return Row(
+mainAxisSize: MainAxisSize.min,
+children: [
+Icon(trend.icon, size: 14, color: trend.color),
+const SizedBox(width: 2),
+Text(
+trend.label,
+style: TextStyle(
+fontSize: 10,
+color: trend.color,
+fontWeight: FontWeight.bold,
+),
+),
+],
+);
+}
 
-  void _showCompleteAnimation(BuildContext context) {
-    final overlay = Overlay.of(context);
-    late OverlayEntry entry;
-    entry = OverlayEntry(
-      builder: (context) => _AnimatedCareOverlay(
-        onDismissed: () => entry.remove(),
-      ),
-    );
-    overlay.insert(entry);
-  }
+void _showCompleteAnimation(BuildContext context) {
+final overlay = Overlay.of(context);
+late OverlayEntry entry;
+entry = OverlayEntry(
+builder: (context) => _AnimatedCareOverlay(
+onDismissed: () => entry.remove(),
+),
+);
+overlay.insert(entry);
+}
 
-  Widget _buildCareTaskCard(
-    BuildContext context,
-    CareTask task,
-    PlantProvider provider,
-    Plant plant,
-    bool isDark,
-    TextTheme textTheme,
-  ) {
+Widget _buildCareTaskCard(
+BuildContext context,
+CareTask task,
+PlantProvider provider,
+Plant plant,
+bool isDark,
+TextTheme textTheme,
+) {
 final isOverdue = task.isOverdue;
 return Container(
 margin: const EdgeInsets.only(bottom: 8),
@@ -534,8 +535,11 @@ final taskName = task.careType.displayName;
 final plantName = plant.name;
 
 final noteController = TextEditingController();
-final note = await showDialog<String>(
+// Returns null = user cancelled (back button or Batal)
+// Returns String (possibly empty) = user confirmed
+final result = await showDialog<String?>(
 context: context,
+barrierDismissible: true, // tap di luar = batal
 builder: (ctx) => AlertDialog(
 title: Text('$taskName untuk $plantName'),
 content: TextField(
@@ -548,36 +552,39 @@ border: OutlineInputBorder(),
 ),
 actions: [
 TextButton(
-onPressed: () => Navigator.pop(ctx, ''),
-child: const Text('Lewati'),
+onPressed: () => Navigator.pop(ctx, null), // BATAL
+child: const Text('Batal'),
 ),
 ElevatedButton(
-onPressed: () => Navigator.pop(ctx, noteController.text.trim()),
-child: const Text('Simpan'),
+onPressed: () => Navigator.pop(ctx, noteController.text.trim()), // KONFIRMASI
+child: const Text('Selesai'),
 ),
 ],
 ),
 );
 noteController.dispose();
 
-                final success = await provider.completeCareTask(
-                  plant.id, task.careType,
-                  note: note?.isEmpty == true ? null : note,
-                );
-                if (success) {
-                  if (context.mounted) {
-                    _showCompleteAnimation(context);
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          '$taskName untuk $plantName selesai!',
-                        ),
-                        duration: const Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                }
+// result == null means cancelled
+if (result == null) return;
+
+final success = await provider.completeCareTask(
+plant.id, task.careType,
+note: result.isEmpty ? null : result,
+);
+if (success) {
+if (context.mounted) {
+_showCompleteAnimation(context);
+messenger.showSnackBar(
+SnackBar(
+content: Text(
+'$taskName untuk $plantName selesai!',
+),
+duration: const Duration(seconds: 2),
+behavior: SnackBarBehavior.floating,
+),
+);
+}
+}
 },
 ),
 ],
@@ -712,86 +719,86 @@ return 'Ganti';
 }
 
 class _AnimatedCareOverlay extends StatefulWidget {
-  final VoidCallback onDismissed;
+final VoidCallback onDismissed;
 
-  const _AnimatedCareOverlay({required this.onDismissed});
+const _AnimatedCareOverlay({required this.onDismissed});
 
-  @override
-  State<_AnimatedCareOverlay> createState() => _AnimatedCareOverlayState();
+@override
+State<_AnimatedCareOverlay> createState() => _AnimatedCareOverlayState();
 }
 
 class _AnimatedCareOverlayState extends State<_AnimatedCareOverlay>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnim;
-  late Animation<double> _fadeAnim;
+with SingleTickerProviderStateMixin {
+late AnimationController _controller;
+late Animation<double> _scaleAnim;
+late Animation<double> _fadeAnim;
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _scaleAnim = Tween<double>(begin: 0.3, end: 1.2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
-    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.3)),
-    );
-    _controller.forward();
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      widget.onDismissed();
-    });
-  }
+@override
+void initState() {
+super.initState();
+_controller = AnimationController(
+vsync: this,
+duration: const Duration(milliseconds: 800),
+);
+_scaleAnim = Tween<double>(begin: 0.3, end: 1.2).animate(
+CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+);
+_fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.3)),
+);
+_controller.forward();
+Future.delayed(const Duration(milliseconds: 1200), () {
+widget.onDismissed();
+});
+}
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+@override
+void dispose() {
+_controller.dispose();
+super.dispose();
+}
 
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Center(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return Opacity(
-                opacity: _fadeAnim.value,
-                child: Transform.scale(
-                  scale: _scaleAnim.value,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: AppColors.success,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.success.withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: 60,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
+@override
+Widget build(BuildContext context) {
+return IgnorePointer(
+child: Scaffold(
+backgroundColor: Colors.transparent,
+body: Center(
+child: AnimatedBuilder(
+animation: _controller,
+builder: (context, child) {
+return Opacity(
+opacity: _fadeAnim.value,
+child: Transform.scale(
+scale: _scaleAnim.value,
+child: Container(
+width: 100,
+height: 100,
+decoration: BoxDecoration(
+color: AppColors.success,
+shape: BoxShape.circle,
+boxShadow: [
+BoxShadow(
+color: AppColors.success.withValues(alpha: 0.4),
+blurRadius: 20,
+spreadRadius: 5,
+),
+],
+),
+child: const Icon(
+Icons.check_rounded,
+color: Colors.white,
+size: 60,
+),
+),
+),
+);
+},
+),
+),
+),
+);
+}
 }
 
 class _CareHistoryTab extends StatelessWidget {
@@ -889,6 +896,16 @@ fontWeight: FontWeight.bold,
 ),
 const SizedBox(height: 2),
 Text(formattedDate, style: textTheme.bodySmall),
+if (history.note != null && history.note!.isNotEmpty) ...[
+const SizedBox(height: 4),
+Text(
+history.note!,
+style: textTheme.bodySmall?.copyWith(
+fontStyle: FontStyle.italic,
+color: isDark ? AppColors.textSecondaryDark : Colors.grey,
+),
+),
+],
 ],
 ),
 ),

@@ -128,10 +128,18 @@ if (index == _pages.length - 1) ...[
 const SizedBox(height: 24),
 TextField(
 controller: _nameController,
-decoration: const InputDecoration(
+style: const TextStyle(color: Colors.black87),
+cursorColor: AppColors.primaryLight,
+decoration: InputDecoration(
 hintText: 'Nama kamu (opsional)',
-border: OutlineInputBorder(),
-prefixIcon: Icon(Icons.person_outline),
+hintStyle: const TextStyle(color: Colors.black38),
+filled: true,
+fillColor: Colors.white,
+border: const OutlineInputBorder(),
+prefixIcon: Icon(
+Icons.person_outline,
+color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+),
 ),
 ),
 ],
