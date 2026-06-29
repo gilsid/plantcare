@@ -29,13 +29,14 @@ class PlantAdapter extends TypeAdapter<Plant> {
       wateringHistory: (fields[9] as List?)?.cast<WateringLog>(),
       growthDiary: (fields[10] as List?)?.cast<GrowthEntry>(),
       location: fields[12] as String?,
+      tags: (fields[13] as List?)?.cast<String>() ?? [],
     );
   }
 
   @override
   void write(BinaryWriter writer, Plant obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +60,9 @@ class PlantAdapter extends TypeAdapter<Plant> {
       ..writeByte(10)
       ..write(obj.growthDiary)
       ..writeByte(12)
-      ..write(obj.location);
+      ..write(obj.location)
+      ..writeByte(13)
+      ..write(obj.tags);
   }
 
   @override

@@ -46,6 +46,9 @@ class Plant extends HiveObject {
   @HiveField(12)
   String? location;
 
+  @HiveField(13)
+  List<String> tags;
+
   Plant({
     required this.id,
     required this.name,
@@ -59,8 +62,10 @@ class Plant extends HiveObject {
     List<WateringLog>? wateringHistory,
     List<GrowthEntry>? growthDiary,
     this.location,
+    List<String>? tags,
   }) : wateringHistory = wateringHistory ?? [],
-       growthDiary = growthDiary ?? [];
+       growthDiary = growthDiary ?? [],
+       tags = tags ?? [];
 
 
 }

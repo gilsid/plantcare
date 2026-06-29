@@ -22,12 +22,14 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
   final _speciesController = TextEditingController();
   final _notesController = TextEditingController();
   final _customLocationController = TextEditingController();
+  final _tagController = TextEditingController();
 
   String? _photoPath;
   bool _isEditing = false;
   bool _isSaving = false;
   String? _selectedLocation;
   bool _isCustomLocation = false;
+  List<String> _tags = [];
 
   final List<_CareTaskForm> _careTasks = [];
 
@@ -79,6 +81,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
       _speciesController.text = plant.species;
       _notesController.text = plant.notes ?? '';
       _selectedLocation = plant.location;
+      _tags = List<String>.from(plant.tags);
       if (plant.location != null && !_quickLocations.contains(plant.location)) {
         _isCustomLocation = true;
         _customLocationController.text = plant.location!;
@@ -117,6 +120,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
     _speciesController.dispose();
     _notesController.dispose();
     _customLocationController.dispose();
+    _tagController.dispose();
     super.dispose();
   }
 
@@ -241,6 +245,18 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
     );
   }
 
+  void _addTag() {
+    final tag = _tagController.text.trim().toLowerCase();
+    if (tag.isNotEmpty && !_tags.contains(tag)) {
+      setState(() => _tags.add(tag));
+      _tagController.clear();
+    }
+  }
+
+  void _removeTag(String tag) {
+    setState(() => _tags.remove(tag));
+  }
+
   void _removeCareTask(int index) {
     final taskName = _careTasks[index].type.displayName;
     setState(() {
@@ -279,6 +295,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
           notes: _notesController.text.trim().isEmpty
               ? null
               : _notesController.text.trim(),
+          tags: _tags,
         );
         debugPrint('[AddEditPlant] updatePlant: success');
 
@@ -320,6 +337,7 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
           name: _nameController.text.trim(),
           species: _speciesController.text.trim(),
           location: location,
+          tags: _tags,
           careTasks:
               _careTasks
                   .map(
@@ -457,6 +475,10 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
                   minimumSize: const Size(double.infinity, 50),
                 ),
               ),
+              const SizedBox(height: 20),
+              _buildSectionLabel('Tag / Kategori'),
+              const SizedBox(height: 8),
+              _buildTagsInput(isDark, textTheme),
               const SizedBox(height: 20),
               _buildSectionLabel('Catatan Perawatan (Opsional)'),
               const SizedBox(height: 8),
@@ -787,6 +809,47 @@ class _AddEditPlantScreenState extends State<AddEditPlantScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTagsInput(bool isDark, TextTheme textTheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _tagController,
+                decoration: const InputDecoration(
+                  hintText: 'Ketik tag lalu tambah...',
+                  isDense: true,
+                ),
+                onSubmitted: (_) => _addTag(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: _addTag,
+            ),
+          ],
+        ),
+        if (_tags.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: _tags.map((tag) => Chip(
+              label: Text(tag, style: const TextStyle(fontSize: 12)),
+              deleteIcon: const Icon(Icons.close, size: 16),
+              onDeleted: () => _removeTag(tag),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            )).toList(),
+          ),
+        ],
+      ],
     );
   }
 

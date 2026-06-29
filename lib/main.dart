@@ -11,6 +11,7 @@ import 'screens/settings/settings_screen.dart';
 import 'screens/add_edit_plant/add_edit_plant_screen.dart';
 import 'screens/plant_detail/plant_detail_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
+import 'screens/schedule/schedule_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -76,6 +77,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomeScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/onboarding': (context) => const OnboardingScreen(),
+        '/schedule': (context) => const ScheduleScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/plant-detail') {
