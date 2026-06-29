@@ -12,6 +12,7 @@ class DatabaseService {
   static const String _careHistoriesBoxName = 'careHistories';
   static const String _themeModeKey = 'isDarkMode';
   static const String _onboardingKey = 'hasSeenOnboarding';
+  static const String _usernameKey = 'username';
 
   late Box<Plant> _plantsBox;
   late Box _settingsBox;
@@ -111,5 +112,13 @@ class DatabaseService {
 
   bool getOnboardingSeen() {
     return _settingsBox.get(_onboardingKey, defaultValue: false) as bool;
+  }
+
+  Future<void> setUsername(String name) async {
+    await _settingsBox.put(_usernameKey, name);
+  }
+
+  String getUsername() {
+    return _settingsBox.get(_usernameKey, defaultValue: '') as String;
   }
 }

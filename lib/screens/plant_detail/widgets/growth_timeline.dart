@@ -301,6 +301,7 @@ class _GrowthTimelineState extends State<GrowthTimeline> {
                         child: PlantImage(
                           photoPath: entry.photoPath,
                           fit: BoxFit.cover,
+                          initials: widget.plant.name,
                           height: 140,
                           width: double.infinity,
                           errorBuilder: (context, error, stackTrace) {

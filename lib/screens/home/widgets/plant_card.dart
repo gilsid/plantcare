@@ -84,6 +84,7 @@ class PlantCard extends StatelessWidget {
                       child: PlantImage(
                         photoPath: plant.photoPath,
                         fit: BoxFit.cover,
+                        initials: plant.name,
                         errorBuilder: (context, error, stackTrace) {
                           return const Icon(Icons.broken_image, size: 32);
                         },
@@ -277,5 +278,107 @@ class PlantCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class PlantGridCard extends StatelessWidget {
+  final Plant plant;
+  final VoidCallback onTap;
+
+  const PlantGridCard({super.key, required this.plant, required this.onTap});
+
+  String _getStatusText(Plant plant, BuildContext context) {
+    final provider = context.read<PlantProvider>();
+    final tasks = provider.getCareTasksForPlant(plant.id);
+    final overdue = tasks.where((t) => t.isOverdue);
+    if (overdue.isNotEmpty) {
+      return '${overdue.length} overdue';
+    }
+    return '${plant.healthScore.round()}% sehat';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Hero(
+                tag: 'plant_image_${plant.id}',
+                child: Container(
+                  color: isDark ? const Color(0xFF252D2A) : const Color(0xFFECECE5),
+                  child: PlantImage(
+                    photoPath: plant.photoPath,
+                    fit: BoxFit.cover,
+                    initials: plant.name,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.broken_image, size: 32);
+                    },
+                    placeholder: Icon(
+                      Icons.local_florist,
+                      size: 40,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.primaryLight.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    plant.name,
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    plant.species,
+                    style: textTheme.bodySmall?.copyWith(
+                      fontStyle: FontStyle.italic,
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  HealthBar(score: plant.healthScore, showText: false, height: 4),
+                  const SizedBox(height: 4),
+                  Text(
+                    _getStatusText(plant, context),
+                    style: textTheme.bodySmall?.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: _getStatusColor(plant, context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(Plant plant, BuildContext context) {
+    final provider = context.read<PlantProvider>();
+    final tasks = provider.getCareTasksForPlant(plant.id);
+    if (tasks.any((t) => t.isOverdue)) return AppColors.error;
+    return AppColors.success;
   }
 }

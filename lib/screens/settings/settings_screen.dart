@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../app/theme/app_colors.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/plant_provider.dart';
+import '../../services/database_service.dart';
 import '../../widgets/confirm_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -87,6 +88,74 @@ class SettingsScreen extends StatelessWidget {
                           ? AppColors.primaryDark
                           : AppColors.primaryLight,
                     ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Profile Section
+          Text(
+            'Profil',
+            style: textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: isDark
+                    ? AppColors.primaryDark.withValues(alpha: 0.1)
+                    : AppColors.primaryLight.withValues(alpha: 0.1),
+                child: Icon(Icons.person_outline,
+                    color: isDark ? AppColors.primaryDark : AppColors.primaryLight),
+              ),
+              title: Text(
+                context.read<DatabaseService>().getUsername().isNotEmpty
+                    ? context.read<DatabaseService>().getUsername()
+                    : 'Atur Nama',
+              ),
+              subtitle: Text(
+                context.read<DatabaseService>().getUsername().isNotEmpty
+                    ? 'Tap untuk mengganti nama'
+                    : 'Tap untuk memberi nama',
+              ),
+              trailing: const Icon(Icons.edit),
+              onTap: () {
+                final controller = TextEditingController(
+                  text: context.read<DatabaseService>().getUsername(),
+                );
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Nama Kamu'),
+                    content: TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(
+                        hintText: 'Masukkan nama...',
+                        border: OutlineInputBorder(),
+                      ),
+                      autofocus: true,
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Batal'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          context.read<DatabaseService>().setUsername(
+                            controller.text.trim(),
+                          );
+                          Navigator.pop(ctx);
+                          (context as Element).markNeedsBuild();
+                        },
+                        child: const Text('Simpan'),
+                      ),
+                    ],
                   ),
                 );
               },

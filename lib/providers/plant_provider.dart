@@ -248,7 +248,7 @@ class PlantProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> completeCareTask(String plantId, CareType careType) async {
+  Future<bool> completeCareTask(String plantId, CareType careType, {String? note}) async {
     final tasks = getCareTasksForPlant(plantId);
     final task = tasks.where((t) => t.careType == careType).firstOrNull;
     if (task == null) return false;
@@ -262,6 +262,7 @@ class PlantProvider extends ChangeNotifier {
       careTypeIndex: careType.index,
       completedAt: now,
       wasOnTime: wasOnTime,
+      note: note,
     );
     await _dbService.saveCareHistory(history);
     _careHistories.insert(0, history);

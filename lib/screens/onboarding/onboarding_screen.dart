@@ -12,6 +12,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
+  final TextEditingController _nameController = TextEditingController();
   int _currentPage = 0;
 
   static const List<_OnboardingPage> _pages = [
@@ -38,11 +39,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
   Future<void> _finish() async {
     final db = context.read<DatabaseService>();
+    final name = _nameController.text.trim();
+    if (name.isNotEmpty) {
+      await db.setUsername(name);
+    }
     await db.setOnboardingSeen();
     if (mounted) {
       Navigator.of(context).pushReplacementNamed('/');
@@ -118,6 +124,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           textAlign: TextAlign.center,
                           style: textTheme.bodyMedium?.copyWith(height: 1.6),
                         ),
+                        if (index == _pages.length - 1) ...[
+                          const SizedBox(height: 24),
+                          TextField(
+                            controller: _nameController,
+                            decoration: const InputDecoration(
+                              hintText: 'Nama kamu (opsional)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.person_outline),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   );

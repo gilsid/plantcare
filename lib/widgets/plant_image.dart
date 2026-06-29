@@ -10,6 +10,7 @@ class PlantImage extends StatelessWidget {
   final double? width;
   final double? height;
   final Widget? placeholder;
+  final String? initials;
 
   const PlantImage({
     super.key,
@@ -19,20 +20,41 @@ class PlantImage extends StatelessWidget {
     this.width,
     this.height,
     this.placeholder,
+    this.initials,
   });
+
+  static Color _colorFromName(String name) {
+    final hash = name.hashCode;
+    final colors = [Colors.teal, Colors.indigo, Colors.orange, Colors.pink];
+    return colors[hash.abs() % colors.length];
+  }
 
   @override
   Widget build(BuildContext context) {
     final Widget fallback = placeholder ??
-        Container(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF252D2A)
-              : const Color(0xFFECECE5),
-          child: const Icon(Icons.broken_image),
-        );
+        (initials != null
+            ? Container(
+                color: _colorFromName(initials!),
+                child: Center(
+                  child: Text(
+                    initials!.substring(0, initials!.length > 1 ? 2 : 1).toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              )
+            : Container(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF252D2A)
+                    : const Color(0xFFECECE5),
+                child: const Icon(Icons.broken_image),
+              ));
 
     if (photoPath == null || photoPath!.isEmpty) {
-      return placeholder ?? const SizedBox.shrink();
+      return placeholder ?? (initials != null ? fallback : const SizedBox.shrink());
     }
 
     if (photoPath!.startsWith('data:image/') && photoPath!.contains(';base64,')) {

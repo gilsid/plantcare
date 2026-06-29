@@ -151,6 +151,7 @@ class PlantDetailScreen extends StatelessWidget {
                             child: PlantImage(
                               photoPath: plant.photoPath,
                               fit: BoxFit.cover,
+                              initials: plant.name,
                               placeholder: Container(
                                 color: isDark
                                     ? const Color(0xFF1E2421)
@@ -494,7 +495,38 @@ class PlantDetailScreen extends StatelessWidget {
               final messenger = ScaffoldMessenger.of(context);
               final taskName = task.careType.displayName;
               final plantName = plant.name;
-              final success = await provider.completeCareTask(plant.id, task.careType);
+
+              final noteController = TextEditingController();
+              final note = await showDialog<String>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text('$taskName untuk $plantName'),
+                  content: TextField(
+                    controller: noteController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: 'Catatan (opsional) — misal: pupuk 10ml, daun kuning...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, ''),
+                      child: const Text('Lewati'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, noteController.text.trim()),
+                      child: const Text('Simpan'),
+                    ),
+                  ],
+                ),
+              );
+              noteController.dispose();
+
+              final success = await provider.completeCareTask(
+                plant.id, task.careType,
+                note: note?.isEmpty == true ? null : note,
+              );
               if (success) {
                 messenger.showSnackBar(
                   SnackBar(

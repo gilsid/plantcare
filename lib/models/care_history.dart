@@ -22,11 +22,15 @@ class CareHistory extends HiveObject {
   @HiveField(4)
   final bool? wasOnTime;
 
+  @HiveField(5)
+  final String? note;
+
   CareHistory({
     required this.id,
     required this.plantId,
     required this.careTypeIndex,
     required this.completedAt,
     this.wasOnTime,
+    this.note,
   });
 }

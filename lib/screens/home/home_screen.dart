@@ -4,6 +4,7 @@ import '../../app/theme/app_colors.dart';
 import '../../models/plant.dart';
 import '../../models/enums.dart';
 import '../../providers/plant_provider.dart';
+import '../../services/database_service.dart';
 import 'widgets/plant_card.dart';
 import 'widgets/empty_state.dart';
 
@@ -25,6 +26,14 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   String _selectedFilter = 'Semua';
   PlantSortOption _sortOption = PlantSortOption.dateAdded;
+  bool _isGridView = false;
+
+  String _greeting() {
+    final db = context.read<DatabaseService>();
+    final name = db.getUsername();
+    if (name.isEmpty) return 'PlantCare';
+    return 'Halo, $name!';
+  }
 
   @override
   void initState() {
@@ -159,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'PlantCare',
+                            _greeting(),
                             style: textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 28,
@@ -167,7 +176,38 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
-                      IconButton(
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          PopupMenuButton<PlantSortOption>(
+                            icon: Icon(
+                              Icons.sort,
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            ),
+                            onSelected: (opt) => setState(() => _sortOption = opt),
+                            itemBuilder: (context) => PlantSortOption.values
+                                .map((opt) => PopupMenuItem(
+                                  value: opt,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (_sortOption == opt)
+                                        const Icon(Icons.check, size: 18),
+                                      if (_sortOption == opt) const SizedBox(width: 8),
+                                      Text(_sortLabel(opt)),
+                                    ],
+                                  ),
+                                ))
+                                .toList(),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              _isGridView ? Icons.view_list : Icons.grid_view,
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            ),
+                            onPressed: () => setState(() => _isGridView = !_isGridView),
+                          ),
+                          IconButton(
                         icon: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
@@ -335,55 +375,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
 
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: Row(
-                      children: [
-                        Text(
-                          'Urutkan:',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ...PlantSortOption.values.map((opt) {
-                          final isSelected = _sortOption == opt;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: GestureDetector(
-                              onTap: () => setState(() => _sortOption = opt),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 150),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? (isDark ? AppColors.primaryDark : AppColors.primaryLight)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? (isDark ? AppColors.primaryDark : AppColors.primaryLight)
-                                        : (isDark ? const Color(0xFF252D2A) : const Color(0xFFE2E2DC)),
-                                  ),
-                                ),
-                                child: Text(
-                                  _sortLabel(opt),
-                                  style: textTheme.bodySmall?.copyWith(
-                                    fontSize: 11,
-                                    color: isSelected
-                                        ? (isDark ? Colors.black : Colors.white)
-                                        : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-
-                  Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -463,7 +454,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                         )
-                      : ListView.builder(
+                      : _isGridView
+                          ? GridView.builder(
+                              itemCount: filteredPlants.length,
+                              padding: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 0.75,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                              ),
+                              itemBuilder: (context, index) {
+                                final plant = filteredPlants[index];
+                                return PlantGridCard(
+                                  plant: plant,
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/plant-detail',
+                                      arguments: plant.id,
+                                    );
+                                  },
+                                );
+                              },
+                            )
+                          : ListView.builder(
                           itemCount: filteredPlants.length,
                           padding: const EdgeInsets.only(bottom: 80),
                           itemBuilder: (context, index) {
