@@ -17,97 +17,97 @@ import 'screens/schedule/schedule_screen.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('id');
+WidgetsFlutterBinding.ensureInitialized();
+await initializeDateFormatting('id');
 
-  // Initialize Core Services
-  final dbService = DatabaseService();
-  await dbService.init();
+// Initialize Core Services
+final dbService = DatabaseService();
+await dbService.init();
 
-  final hasSeenOnboarding = dbService.getOnboardingSeen();
+final hasSeenOnboarding = dbService.getOnboardingSeen();
 
-  final notificationService = NotificationService();
-  await notificationService.init(
-    onNotificationTap: (plantId) {
-      navigatorKey.currentState?.pushNamed('/plant-detail', arguments: plantId);
-    },
-  );
-  // Request notifications permission on startup
-  await notificationService.requestPermissions();
+final notificationService = NotificationService();
+await notificationService.init(
+onNotificationTap: (plantId) {
+navigatorKey.currentState?.pushNamed('/plant-detail', arguments: plantId);
+},
+);
+// Request notifications permission on startup
+await notificationService.requestPermissions();
 
-  final imageService = ImageService();
+final imageService = ImageService();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        Provider<DatabaseService>.value(value: dbService),
-        Provider<NotificationService>.value(value: notificationService),
-        Provider<ImageService>.value(value: imageService),
-        ChangeNotifierProvider<ThemeProvider>(
-          create: (context) => ThemeProvider(dbService),
-        ),
-        ChangeNotifierProvider<PlantProvider>(
-          create: (context) => PlantProvider(
-            dbService: dbService,
-            notificationService: notificationService,
-            imageService: imageService,
-          ),
-        ),
-      ],
-      child: MyApp(hasSeenOnboarding: hasSeenOnboarding),
-    ),
-  );
+runApp(
+MultiProvider(
+providers: [
+Provider<DatabaseService>.value(value: dbService),
+Provider<NotificationService>.value(value: notificationService),
+Provider<ImageService>.value(value: imageService),
+ChangeNotifierProvider<ThemeProvider>(
+create: (context) => ThemeProvider(dbService),
+),
+ChangeNotifierProvider<PlantProvider>(
+create: (context) => PlantProvider(
+dbService: dbService,
+notificationService: notificationService,
+imageService: imageService,
+),
+),
+],
+child: MyApp(hasSeenOnboarding: hasSeenOnboarding),
+),
+);
 }
 
 class MyApp extends StatelessWidget {
-  final bool hasSeenOnboarding;
-  const MyApp({super.key, required this.hasSeenOnboarding});
+final bool hasSeenOnboarding;
+const MyApp({super.key, required this.hasSeenOnboarding});
 
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+@override
+Widget build(BuildContext context) {
+final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return MaterialApp(
-      navigatorKey: navigatorKey,
-      title: 'PlantCare',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeProvider.themeMode,
-      initialRoute: hasSeenOnboarding ? '/' : '/onboarding',
-      routes: {
-        '/': (context) => const HomeScreen(),
-        '/settings': (context) => const SettingsScreen(),
-        '/onboarding': (context) => const OnboardingScreen(),
-        '/schedule': (context) => const ScheduleScreen(),
-      },
-      onGenerateRoute: (settings) {
-        if (settings.name == '/plant-detail') {
-          final String plantId = settings.arguments as String;
-          return PageRouteBuilder(
-            settings: settings,
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                PlantDetailScreen(plantId: plantId),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(
-                opacity: CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeInOut,
-                ),
-                child: child,
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 280),
-          );
-        }
-        if (settings.name == '/add-edit-plant') {
-          final String? plantId = settings.arguments as String?;
-          return MaterialPageRoute(
-            builder: (context) => AddEditPlantScreen(plantId: plantId),
-          );
-        }
-        return null;
-      },
-    );
-  }
+return MaterialApp(
+navigatorKey: navigatorKey,
+title: 'PlantCare',
+debugShowCheckedModeBanner: false,
+theme: AppTheme.lightTheme,
+darkTheme: AppTheme.darkTheme,
+themeMode: themeProvider.themeMode,
+initialRoute: hasSeenOnboarding ? '/' : '/onboarding',
+routes: {
+'/': (context) => const HomeScreen(),
+'/settings': (context) => const SettingsScreen(),
+'/onboarding': (context) => const OnboardingScreen(),
+'/schedule': (context) => const ScheduleScreen(),
+},
+onGenerateRoute: (settings) {
+if (settings.name == '/plant-detail') {
+final String plantId = settings.arguments as String;
+return PageRouteBuilder(
+settings: settings,
+pageBuilder: (context, animation, secondaryAnimation) =>
+PlantDetailScreen(plantId: plantId),
+transitionsBuilder: (context, animation, secondaryAnimation, child) {
+return FadeTransition(
+opacity: CurvedAnimation(
+parent: animation,
+curve: Curves.easeInOut,
+),
+child: child,
+);
+},
+transitionDuration: const Duration(milliseconds: 280),
+);
+}
+if (settings.name == '/add-edit-plant') {
+final String? plantId = settings.arguments as String?;
+return MaterialPageRoute(
+builder: (context) => AddEditPlantScreen(plantId: plantId),
+);
+}
+return null;
+},
+);
+}
 }
