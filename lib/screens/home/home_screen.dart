@@ -265,8 +265,10 @@ Navigator.pushNamed(context, '/settings');
 },
 ),
 ],
-),
-),
+      ),
+      ],   // close outer children (179)
+    ),     // close outer Row (177)
+  ),       // close Padding (175)
 
 if (allPlants.isNotEmpty) ...[
 Container(
@@ -623,6 +625,7 @@ arguments: plant.id,
                         }
                         return false;
                       } else {
+                        final deleteProvider = context.read<PlantProvider>();
                         final bool? confirm = await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
@@ -641,7 +644,7 @@ arguments: plant.id,
                           ),
                         );
                         if (confirm == true) {
-                          await context.read<PlantProvider>().deletePlant(plant.id);
+                          await deleteProvider.deletePlant(plant.id);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(

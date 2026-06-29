@@ -259,7 +259,7 @@ const SizedBox(height: 16),
                                 style: textTheme.bodySmall,
                               ),
                               const Spacer(),
-                              _buildTrend(context, provider, plant.id),
+                              _buildTrend(context, provider, plant.id) ?? const SizedBox.shrink(),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -565,16 +565,18 @@ noteController.dispose();
                   note: note?.isEmpty == true ? null : note,
                 );
                 if (success) {
-                  _showCompleteAnimation(context);
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '$taskName untuk $plantName selesai!',
+                  if (context.mounted) {
+                    _showCompleteAnimation(context);
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '$taskName untuk $plantName selesai!',
+                        ),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
                       ),
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                    );
+                  }
                 }
 },
 ),

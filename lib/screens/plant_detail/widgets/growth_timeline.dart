@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../models/plant.dart';
+import '../../../models/growth_entry.dart';
 import '../../../providers/plant_provider.dart';
 import '../../../services/image_service.dart';
 import '../../../widgets/confirm_dialog.dart';
