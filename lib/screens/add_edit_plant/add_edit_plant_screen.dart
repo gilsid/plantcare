@@ -279,13 +279,12 @@ if (_isSaving) return;
 setState(() => _isSaving = true);
 
 final notifService = context.read<NotificationService>();
+final provider = context.read<PlantProvider>();
 await notifService.requestPermissions();
 
 final location = _isCustomLocation
 ? _customLocationController.text.trim()
 : _selectedLocation;
-
-final provider = context.read<PlantProvider>();
 
 try {
 if (_isEditing) {
